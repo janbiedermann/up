@@ -20,7 +20,7 @@ Up!:     0.049ms  <<< fastest
 
 running on linux with:
 ruby 3.3.0, YJit enabled
-Opal 1.8.2 with node v2011.0
+Opal 1.8.2 with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 4 threads
 Up! 0.0.1, 1 worker, no threads
