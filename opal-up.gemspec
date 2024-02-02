@@ -3,7 +3,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require_relative 'lib/up/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'up'
+  spec.name          = 'opal-up'
   spec.version       = Up::VERSION
   spec.authors       = ['Jan Biedermann']
   spec.email         = ['jan@kursator.de']
