@@ -17,7 +17,7 @@ Time per Request, mean, across all concurrent requests:
 Puma:    0.156ms
 Iodine:  0.054ms
 Up!:     0.049ms  <<< fastest
-```
+
 running on linux with:
 ruby 3.3.0, YJit enabled
 Opal 1.8.2 with node v2011.0
@@ -26,7 +26,8 @@ Iodine 0.7.57, 4 workers, 4 threads
 Up! 0.0.1, 1 worker, no threads
 
 running the example_rack_app from this repo, benchmarked with:
-`ab -n 100000 -c 10 http://localhost:3000/`
+ab -n 100000 -c 10 http://localhost:3000/
+```
 
 ## Introduction
 
