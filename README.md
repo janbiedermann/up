@@ -1,7 +1,7 @@
 <img src="https://raw.githubusercontent.com/janbiedermann/up/master/up_logo.svg" alt="UP Logo">
 <small>Original Image by <a href="https://www.freepik.com/free-vector/colorful-arrows_715199.htm#query=up&position=3&from_view=search&track=sph&uuid=63f9eddf-02a6-4e5c-8178-8cfa507ee33d">Freepik</a>, modified though</small>
 
-# UP
+# UP!
 
 A high performance Rack server for Opal Ruby, Tech Demo
 
@@ -18,7 +18,7 @@ Puma:    0.156ms
 Iodine:  0.054ms
 Up!:     0.049ms  <<< fastest
 
-running on linux with:
+running on Linux with:
 ruby 3.3.0, YJit enabled
 Opal 1.8.2 with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
