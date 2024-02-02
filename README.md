@@ -31,7 +31,7 @@ ab -n 100000 -c 10 http://localhost:3000/
 
 ## Introduction
 
-This is currently mainly a technical demonstration, demonstrating the speed of the Opal Ruby implementation employing Node and UWebSocketJs as runtime. Its not yet a generic, all purpose Reck server, but good for further experimentation, research and open for improvement.
+This is currently mainly a technical demonstration, demonstrating the speed of the Opal Ruby implementation employing Node and UWebSocketJs as runtime. Its not yet a generic, all purpose Rack server, but good for further experimentation, research and open for improvement.
 
 ## Getting started
 
