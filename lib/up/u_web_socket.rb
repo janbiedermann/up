@@ -3,7 +3,6 @@
 %x{
   module.paths.push(process.cwd() + '/node_modules');
   const uws = require('uWebSockets.js');
-  const cluster = require('node:cluster');
 }
 
 require 'up/uws_rack_env'
