@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+if RUBY_ENGINE == 'opal'
+  require 'up-node'
+  Up::CLI.call
+else
+  # check for commands
+  node_cmd = `which node`
+  npm_cmd = `which npm`
+  raise "Please install node first!" if !node_cmd || node_cmd.empty?
+  raise "Please install npm first!" if !npm_cmd || npm_cmd.empty?
+  node_cmd.chop! if node_cmd.end_with?("\n")
+  npm_cmd.chop! if npm_cmd.end_with?("\n")
+  got_uws = `npm list|grep uWebSockets.js@20`
+  `npm i uNetworking/uWebSockets.js#v20.41.0` if got_uws.empty?
+  lib_dir = File.expand_path("#{__dir__}/../lib")
+
+  # Opal does not yet support gems, so lets read the Gemfile and simply add each gem
+  # to the Opal load path and require it, works for some gems, fails for others
+  gems = ""
+  if File.exist?("Gemfile")
+    lines = File.readlines('Gemfile')
+    lines.each do |line|
+      m = /gem ['"](\w+)['"]/.match(line)
+      gems << " -g #{m[1]} -r #{m[1]}" if m && m[1] != 'up'
+    end
+  end
+  Kernel.exec("opal -Rnodejs -E -I. -I#{lib_dir} -g rack #{gems} #{__FILE__}")
+end

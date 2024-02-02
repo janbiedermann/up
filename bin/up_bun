@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+if RUBY_ENGINE == 'opal'
+  require 'up-bun'
+  Up::CLI.call
+else
+  # check for commands
+  bun_cmd = `which bun`
+  raise "Please install bun first!" if !bun_cmd || bun_cmd.empty?
+  bun_cmd.chop! if bun_cmd.end_with?("\n")
+  lib_dir = File.expand_path("#{__dir__}/../lib")
+  # Opal does not yet support gems, so lets read the Gemfile and simply add each gem
+  # to the Opal load path and require it, works for some gems, fails for others
+  gems = ""
+  if File.exist?("Gemfile")
+    lines = File.readlines('Gemfile')
+    lines.each do |line|
+      m = /gem ['"](\w+)['"]/.match(line)
+      gems << " -g #{m[1]} -r #{m[1]}" if m && m[1] != 'up'
+    end
+  end
+  Kernel.exec("opal -Rbun -E -I. -I#{lib_dir} -g rack #{gems} #{__FILE__}")
+end
