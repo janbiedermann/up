@@ -42,7 +42,7 @@ To start experimenting:
 - bundle install
 - bundle exec up
 
-You may want to change the `gem 'up'` line in the Gemfile to use up from rubygems, if you want to run your app outside of the cloned repo.
+You may want to change the `gem 'opal-up'` line in the Gemfile to use up from rubygems, if you want to run your app outside of the cloned repo.
 
 ## Roda, Sinatra, others ...
 
