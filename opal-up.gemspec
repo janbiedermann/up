@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.license       = 'MIT'
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test_app|test|spec|features)/}) }
   spec.bindir        = 'bin'
-  spec.executables   = %w[up up_bun]
+  spec.executables   = %w[up up_bun up_cluster up_node up_node_cluster]
   spec.require_paths = %w[lib]
 
   spec.add_dependency 'logger', '~> 1.6.0'

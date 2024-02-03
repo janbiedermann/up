@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
 if RUBY_ENGINE == 'opal'
-  require 'up/u_web_socket/server_cli'
+  require 'up/node/server_cli'
   Up::CLI.call
 else
   require 'up/cli'
-  Up::CLI.setup_u_web_socket
+  Up::CLI.setup_node
   lib_dir = File.expand_path("#{__dir__}/../lib")
   gems = Up::CLI.get_gems_for_cmd
   Kernel.exec("opal -Rnodejs -E -I. -I#{lib_dir} -g rack #{gems} #{__FILE__} -- #{ARGV.join(' ')}")
