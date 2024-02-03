@@ -75,9 +75,21 @@ When using secure sockets, the -a, -c and -k options must be provided
 
 ```
 
-## Roda, Sinatra, others ...
+## Roda
 
-... currently do not work! Just basic Rack apps with a few dependencies.
+A example apps for Roda is provided and _appears_ working with the following patches applied:
 
-Example apps for Roda and Sinatra are provided, for convenience of developing and expanding the capabilities of Opal.
+- [Changes required to make Roda _appear_ to work](https://github.com/jeremyevans/roda/compare/master...janbiedermann:roda:master)
+- [Changes required to make Rack _appear_ to work](https://github.com/janbiedermann/rack/commit/1dadea0f9813c2df94715052d2277af13f7d0c0c)
+
+Please note the phrase "_appear_ to work" in above sentences.
+To try:
+- clone Rack 3.0.9 and Roda 3.76
+- apply the patch sets above
+- set paths in the example_roda_app to point to your cloned rack & roda repos
+- and up! the server
+
+## Sinatra, others ...
+
+... currently do not work! A example apps for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
 
