@@ -100,7 +100,7 @@ module Up
           lines = File.readlines('Gemfile')
           lines.each do |line|
             m = /gem ['"](\w+)['"]/.match(line)
-            gems << " -g #{m[1]} -r #{m[1]}" if m && m[1] != 'up'
+            gems << " -g #{m[1]} -r #{m[1]}" if m && m[1] != 'opal-up'
           end
         end
         gems
