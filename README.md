@@ -9,21 +9,24 @@ A high performance Rack server for Opal Ruby, Tech Demo
 
 ```
 Requests per second:
-Puma:    6391.01 req/s
-Iodine: 18645.58 req/s
-Up!:    20258.46 req/s <<< fastest
+Puma:      6391.01 req/s
+Iodine:   18645.58 req/s
+Up! node:  3801.21 req/s
+Up! uWS:  20258.46 req/s <<< fastest
 
 Time per Request, mean, across all concurrent requests:
-Puma:    0.156ms
-Iodine:  0.054ms
-Up!:     0.049ms  <<< fastest
+Puma:     0.156ms
+Iodine:   0.054ms
+Up! node: 0.275ms
+Up! uWS:  0.049ms  <<< fastest
 
 running on Linux with:
 ruby 3.3.0, YJit enabled
 Opal 1.8.2 with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 4 threads
-Up! 0.0.1, 1 worker, no threads
+Up! uWS 0.0.1, 1 worker, no threads
+Up! Node 0.0.2, 4 workers, no threads
 
 running the example_rack_app from this repo, benchmarked with:
 ab -n 100000 -c 10 http://localhost:3000/
@@ -43,6 +46,34 @@ To start experimenting:
 - bundle exec up
 
 You may want to change the `gem 'opal-up'` line in the Gemfile to use up from rubygems, if you want to run your app outside of the cloned repo.
+
+For a Gemfile available from rubygems:
+`gem 'opal-up'`
+
+## Available Commands
+
+Available with `bundle exec` within the example apps or if this gem  is included in your Gemfile:
+
+- `up` - starts a single worker server using uWebSockets, fastest server
+- `up_cluster` - starts a cluster of workers using uWebSockets, still fast, depending on workload may be even faster than the single worker or not
+- `up_node` - starts a single worker server using the standard Node HTTP(S) classes
+- `up_node_cluster` - starts a cluster of workers using the standard Node HTTP(S) classes, probably faster than `up_node`
+- `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
+
+```
+Usage: up [options]
+
+    -h, --help                       Show this message
+    -p, --port PORT                  Port number the server will listen to
+    -b, --bind ADDRESS               Address the server will listen to
+    -s, --secure                     Use secure sockets.
+When using secure sockets, the -a, -c and -k options must be provided
+    -a, --ca-file FILE               File with CA certs
+    -c, --cert-file FILE             File with the servers certificate
+    -k, --key-file FILE              File with the servers certificate
+    -v, --version                    Show version
+
+```
 
 ## Roda, Sinatra, others ...
 
