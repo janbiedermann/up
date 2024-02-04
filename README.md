@@ -42,10 +42,10 @@ Racer 0.1.3, defaults
 Unicorn 6.1.0, 4 workers
 Agoo 2.15.8, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 1 thread
-Up! uWS 0.0.2, 1 worker, no threads
-Up! Node 0.0.2, 4 workers, no threads
-Up! uWS cluster 0.0.2, 4 workers, no threads
-Up! Node cluster 0.0.2, 4 workers, no threads
+Up! uWS 0.0.2, 1 worker
+Up! Node 0.0.2, 4 workers
+Up! uWS cluster 0.0.2, 4 workers
+Up! Node cluster 0.0.2, 4 workers
 
 running the example_rack_app from this repo, benchmarked with:
 bombardier http://localhost:3000/
@@ -53,7 +53,8 @@ bombardier http://localhost:3000/
 on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 
 * env.to_s is the original benchmark, unfortunately triggering a sweet spot in Opal.
-  Thats why i benchmarked in addition with a static string "hello world", to demonstrate the potential.
+  Thats why i benchmarked in addition with a static string "hello world",
+  to demonstrate the potential.
 ```
 
 ## Introduction
