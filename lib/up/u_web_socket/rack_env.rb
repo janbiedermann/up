@@ -48,7 +48,7 @@ module Up
                     when 'PATH_INFO'
                       `#@req.getUrl()`
                     when 'QUERY_STRING'
-                      `#@req.getQuery()`
+                      `#@req.getQuery() || nil`
                     when 'RACK_ERRORS'
                       self['rack.errors']
                     when 'RACK_LOGGER'

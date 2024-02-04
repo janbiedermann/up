@@ -50,7 +50,7 @@ module Up
                     when 'PATH_INFO'
                       `#@req.url`
                     when 'QUERY_STRING'
-                      ""
+                      nil
                     when 'RACK_ERRORS'
                       self['rack.errors']
                     when 'RACK_LOGGER'
