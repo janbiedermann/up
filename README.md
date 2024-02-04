@@ -39,6 +39,8 @@ Up! Node 0.0.2, 4 workers, no threads
 
 running the example_rack_app from this repo, benchmarked with:
 ab -n 100000 -c 10 http://localhost:3000/
+
+on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 ```
 
 ## Introduction
