@@ -23,7 +23,7 @@ Latency:
 Puma:             14.05 ms
 Falcon:            9.32 ms
 Unicorn:          10.26 ms
-Iodine:            2.18 ms
+Iodine:            2.18 ms <<< fastest
 Racer:             8.90 ms
 Up! node:         59.97 ms
 Up! uWS:          49.83 ms
