@@ -10,10 +10,11 @@ A high performance Rack server for Opal Ruby, Tech Demo
 ```
 Requests per second:
 Puma:              9478.41 req/s
-Falcon:           13569.35 req/s
 Unicorn:          12267.86 req/s
-Iodine:           57257.21 req/s <<< fastest
+Falcon:           13569.35 req/s
 Racer:            14640.34 req/s
+Agoo:             51455.38 req/s
+Iodine:           57257.21 req/s <<< fastest
 Up! node:          2096.64 req/s
 Up! uWS:           2511.65 req/s
 Up! node cluster:  6627.05 req/s
@@ -21,10 +22,11 @@ Up! uWS cluster:   8328.87 req/s <<< not the fastest, but still good
 
 Latency:
 Puma:             14.05 ms
-Falcon:            9.32 ms
 Unicorn:          10.26 ms
-Iodine:            2.18 ms <<< fastest
+Falcon:            9.32 ms
 Racer:             8.90 ms
+Agoo:              2.43 ms
+Iodine:            2.18 ms <<< fastest
 Up! node:         59.97 ms
 Up! uWS:          49.83 ms
 Up! node cluster: 18.83 ms
@@ -37,9 +39,12 @@ Puma 6.4.2, 4 workers, 4 threads
 Falcon 0.43.0, 4 workers, 4 threads
 Racer 0.1.3, defaults
 Unicorn 6.1.0, 4 workers
+Agoo 2.15.8, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 4 threads
 Up! uWS 0.0.2, 1 worker, no threads
 Up! Node 0.0.2, 4 workers, no threads
+Up! uWS cluster 0.0.2, 4 workers, no threads
+Up! Node cluster 0.0.2, 4 workers, no threads
 
 running the example_rack_app from this repo, benchmarked with:
 bombardier http://localhost:3000/
