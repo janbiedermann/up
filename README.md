@@ -8,33 +8,34 @@ A high performance Rack server for Opal Ruby, Tech Demo
 ## Let Numbers speak first
 
 ```
-Requests per second:
-Puma:              9478.41 req/s
-Unicorn:          12267.86 req/s
-Falcon:           13569.35 req/s
-Racer:            14640.34 req/s
-Agoo:             51455.38 req/s
-Iodine:           57257.21 req/s <<< fastest
-Up! node:          2096.64 req/s
-Up! uWS:           2511.65 req/s
-Up! node cluster:  6627.05 req/s
-Up! uWS cluster:   8328.87 req/s <<< not the fastest, but still good
+Response type*:         env.to_s        "hello_world"
+Requests/Second:
+Puma:              9478.41 req/s      50822.38 req/s
+Unicorn:          12267.86 req/s      16329.68 req/s
+Falcon:           13569.35 req/s      24041.63 req/s
+Racer:            14640.34 req/s      15354.14 req/s
+Agoo:             51455.38 req/s      89022.91 req/s
+Iodine:           57257.21 req/s <<< 108543.63 req/s
+Up! node:          2096.64 req/s      25041.14 req/s
+Up! uWS:           2511.65 req/s      83853.44 req/s
+Up! node cluster:  6627.05 req/s      61320.38 req/s
+Up! uWS cluster:   8328.87 req/s     152865.96 req/s <<< fastest
 
 Latency:
-Puma:             14.05 ms
-Unicorn:          10.26 ms
-Falcon:            9.32 ms
-Racer:             8.90 ms
-Agoo:              2.43 ms
-Iodine:            2.18 ms <<< fastest
-Up! node:         59.97 ms
-Up! uWS:          49.83 ms
-Up! node cluster: 18.83 ms
-Up! uWS cluster:  14.99 ms <<< not the fastest, but still good
+Puma:                14.05 ms             2.62 ms
+Unicorn:             10.26 ms             7.68 ms
+Falcon:               9.32 ms             5.26 ms
+Racer:                8.90 ms             8.44 ms
+Agoo:                 2.43 ms             1.51 ms
+Iodine:               2.18 ms <<<         1.15 ms
+Up! node:            59.97 ms             4.99 ms
+Up! uWS:             49.83 ms             1.49 ms
+Up! node cluster:    18.83 ms             2.04 ms
+Up! uWS cluster:     14.99 ms             0.82 ms <<< fastest
 
 running on Linux with:
 ruby 3.3.0, YJit enabled
-Opal 1.8.2 with node v20.11.0
+Opal 2.0-dev with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
 Falcon 0.43.0, 4 workers, 4 threads
 Racer 0.1.3, defaults
@@ -50,6 +51,9 @@ running the example_rack_app from this repo, benchmarked with:
 bombardier http://localhost:3000/
 
 on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
+
+* env.to_s is the original benchmark, unfortunately triggering a sweet spot in Opal.
+  Thats why i benchmarked in addition with a static string "hello world", to demonstrate the potential.
 ```
 
 ## Introduction
