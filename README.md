@@ -121,3 +121,9 @@ To try:
 - [Sinatra patches](https://github.com/sinatra/sinatra/compare/main...janbiedermann:sinatra:main)
 - [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
 - [Rack-Session patches](https://github.com/rack/rack-session/compare/main...janbiedermann:rack-session:main)
+
+## About the benchmarks and Opal/Up! performance
+
+The "hello world" benchmark result demonstrates the great potential of using Opal/Node with uWebSocketsJs on the server for executing ruby, however, the `envt.to_s` benchmark column next to it also shows, that its still possible to trigger sweet spots in Opal, that can make things a bit slow. Work continues to improve things.
+
+Link to bombardier, the tool used for benchmarking: [https://github.com/codesenberg/bombardier](https://github.com/codesenberg/bombardier)
