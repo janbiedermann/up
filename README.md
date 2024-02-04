@@ -15,7 +15,7 @@ Unicorn:          12267.86 req/s      16329.68 req/s
 Falcon:           13569.35 req/s      24041.63 req/s
 Racer:            14640.34 req/s      15354.14 req/s
 Agoo:             51455.38 req/s      89022.91 req/s
-Iodine:           57257.21 req/s <<< 108543.63 req/s
+Iodine:           57257.21 req/s <<< 132723.02 req/s
 Up! node:          2096.64 req/s      25041.14 req/s
 Up! uWS:           2511.65 req/s      83853.44 req/s
 Up! node cluster:  6627.05 req/s      61320.38 req/s
@@ -27,7 +27,7 @@ Unicorn:             10.26 ms             7.68 ms
 Falcon:               9.32 ms             5.26 ms
 Racer:                8.90 ms             8.44 ms
 Agoo:                 2.43 ms             1.51 ms
-Iodine:               2.18 ms <<<         1.15 ms
+Iodine:               2.18 ms <<<         0.94 ms
 Up! node:            59.97 ms             4.99 ms
 Up! uWS:             49.83 ms             1.49 ms
 Up! node cluster:    18.83 ms             2.04 ms
@@ -41,7 +41,7 @@ Falcon 0.43.0, 4 workers, 4 threads
 Racer 0.1.3, defaults
 Unicorn 6.1.0, 4 workers
 Agoo 2.15.8, 4 workers, 4 threads
-Iodine 0.7.57, 4 workers, 4 threads
+Iodine 0.7.57, 4 workers, 1 thread
 Up! uWS 0.0.2, 1 worker, no threads
 Up! Node 0.0.2, 4 workers, no threads
 Up! uWS cluster 0.0.2, 4 workers, no threads
