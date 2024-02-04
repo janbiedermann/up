@@ -102,7 +102,7 @@ When using secure sockets, the -a, -c and -k options must be provided
 
 ## Roda
 
-A example apps for Roda is provided and _appears_ working with the following patches applied:
+A example app for Roda is provided and _appears_ working with the following patches applied:
 
 - [Changes required to make Roda _appear_ to work](https://github.com/jeremyevans/roda/compare/master...janbiedermann:roda:master)
 - [Changes required to make Rack _appear_ to work](https://github.com/janbiedermann/rack/commit/1dadea0f9813c2df94715052d2277af13f7d0c0c)
