@@ -8,7 +8,7 @@ A high performance Rack server for Opal Ruby, Tech Demo
 ## Let Numbers speak first
 
 ```
-Response type*:         env.to_s        "hello_world"
+Response type*:         env.to_s       "hello_world"
 Requests/Second:
 Puma:              9478.41 req/s      50822.38 req/s
 Unicorn:          12267.86 req/s      16329.68 req/s
