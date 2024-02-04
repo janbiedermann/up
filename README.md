@@ -11,14 +11,18 @@ A high performance Rack server for Opal Ruby, Tech Demo
 Requests per second:
 Puma:      6391.01 req/s
 Falcon:    8878.10 req/s
+Unicorn:  14675.86 req/s
 Iodine:   18645.58 req/s
+Racer:    19321.63 req/s
 Up! node:  3801.21 req/s
 Up! uWS:  21070.34 req/s <<< fastest
 
 Time per Request, mean, across all concurrent requests:
 Puma:     0.156ms
 Falcon:   0.113ms
+Unicorn:  0.068ms
 Iodine:   0.054ms
+Racer:    0.052ms
 Up! node: 0.275ms
 Up! uWS:  0.047ms  <<< fastest
 
@@ -27,6 +31,8 @@ ruby 3.3.0, YJit enabled
 Opal 1.8.2 with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
 Falcon 0.43.0, 4 workers, 4 threads
+Racer 0.1.3, defaults
+Unicorn 6.1.0, 4 workers
 Iodine 0.7.57, 4 workers, 4 threads
 Up! uWS 0.0.2, 1 worker, no threads
 Up! Node 0.0.2, 4 workers, no threads
