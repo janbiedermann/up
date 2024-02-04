@@ -93,3 +93,6 @@ To try:
 
 ... currently do not work! A example apps for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
 
+- [Sinatra patches](https://github.com/sinatra/sinatra/compare/main...janbiedermann:sinatra:main)
+- [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
+- [Rack-Session patches](https://github.com/rack/rack-session/compare/main...janbiedermann:rack-session:main)
