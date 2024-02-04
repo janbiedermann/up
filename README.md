@@ -100,7 +100,7 @@ To try:
 
 ## Sinatra, others ...
 
-... currently do not work! A example apps for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
+... currently do not work! A example app for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
 
 - [Sinatra patches](https://github.com/sinatra/sinatra/compare/main...janbiedermann:sinatra:main)
 - [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
