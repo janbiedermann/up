@@ -9,22 +9,26 @@ A high performance Rack server for Opal Ruby, Tech Demo
 
 ```
 Requests per second:
-Puma:      6391.01 req/s
-Falcon:    8878.10 req/s
-Unicorn:  14675.86 req/s
-Iodine:   18645.58 req/s
-Racer:    19321.63 req/s
-Up! node:  3801.21 req/s
-Up! uWS:  21070.34 req/s <<< fastest
+Puma:              9478.41 req/s
+Falcon:           13569.35 req/s
+Unicorn:          12267.86 req/s
+Iodine:           57257.21 req/s <<< fastest
+Racer:            14640.34 req/s
+Up! node:          2096.64 req/s
+Up! uWS:           2511.65 req/s
+Up! node cluster:  6627.05 req/s
+Up! uWS cluster:   8328.87 req/s <<< not the fastest, but still good
 
-Time per Request, mean, across all concurrent requests:
-Puma:     0.156ms
-Falcon:   0.113ms
-Unicorn:  0.068ms
-Iodine:   0.054ms
-Racer:    0.052ms
-Up! node: 0.275ms
-Up! uWS:  0.047ms  <<< fastest
+Latency:
+Puma:             14.05 ms
+Falcon:            9.32 ms
+Unicorn:          10.26 ms
+Iodine:            2.18 ms
+Racer:             8.90 ms
+Up! node:         59.97 ms
+Up! uWS:          49.83 ms
+Up! node cluster: 18.83 ms
+Up! uWS cluster:  14.99 ms <<< not the fastest, but still good
 
 running on Linux with:
 ruby 3.3.0, YJit enabled
@@ -38,7 +42,7 @@ Up! uWS 0.0.2, 1 worker, no threads
 Up! Node 0.0.2, 4 workers, no threads
 
 running the example_rack_app from this repo, benchmarked with:
-ab -n 100000 -c 10 http://localhost:3000/
+bombardier http://localhost:3000/
 
 on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 ```
