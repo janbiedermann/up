@@ -46,7 +46,7 @@ module Up
                     when 'rack.url_scheme'
                       @config[:scheme]
                     when 'HTTP_VERSION'
-                      `#@reg.httpVersion`
+                      `#@req.httpVersion`
                     when 'PATH_INFO'
                       `#@req.url`
                     when 'QUERY_STRING'
