@@ -8,7 +8,7 @@ A high performance Rack server for [Opal Ruby](https://github.com/opal/opal), Te
 ## Let Numbers speak first
 
 ```
-Response type*:         env.to_s       "hello_world"
+Response type:          env.to_s       "hello_world"
 Requests/Second:
 Puma:              9478.41 req/s      50822.38 req/s
 Unicorn:          12267.86 req/s      16329.68 req/s
@@ -16,10 +16,10 @@ Falcon:           13569.35 req/s      24041.63 req/s
 Racer:            14640.34 req/s      15354.14 req/s
 Agoo:             51455.38 req/s      89022.91 req/s
 Iodine:           57257.21 req/s <<< 132723.02 req/s
-Up! node:          2096.64 req/s      25041.14 req/s
-Up! uWS:           2511.65 req/s      83853.44 req/s
-Up! node cluster:  6627.05 req/s      61320.38 req/s
-Up! uWS cluster:   8328.87 req/s     152865.96 req/s <<< fastest
+Up! node:          2096.64 req/s*     25041.14 req/s
+Up! uWS:           2511.65 req/s*     83853.44 req/s
+Up! node cluster:  6627.05 req/s*     61320.38 req/s
+Up! uWS cluster:   8328.87 req/s*    152865.96 req/s <<< fastest
 
 Latency:
 Puma:                14.05 ms             2.62 ms
@@ -28,10 +28,10 @@ Falcon:               9.32 ms             5.26 ms
 Racer:                8.90 ms             8.44 ms
 Agoo:                 2.43 ms             1.51 ms
 Iodine:               2.18 ms <<<         0.94 ms
-Up! node:            59.97 ms             4.99 ms
-Up! uWS:             49.83 ms             1.49 ms
-Up! node cluster:    18.83 ms             2.04 ms
-Up! uWS cluster:     14.99 ms             0.82 ms <<< fastest
+Up! node:            59.97 ms*            4.99 ms
+Up! uWS:             49.83 ms*            1.49 ms
+Up! node cluster:    18.83 ms*            2.04 ms
+Up! uWS cluster:     14.99 ms*             0.82 ms <<< fastest
 
 running on Linux with:
 ruby 3.3.0, YJit enabled
@@ -52,14 +52,12 @@ bombardier http://localhost:3000/
 
 on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 
-* env.to_s is the original benchmark, unfortunately triggering a sweet spot in Opal.
-  Thats why i benchmarked in addition with a static string "hello world",
-  to demonstrate the potential.
+* please see section "About the benchmarks ..." below
 ```
 
 ## Introduction
 
-This is currently mainly a technical demonstration, demonstrating the speed of the Opal Ruby implementation employing Node and UWebSocketJs as runtime. Its not yet a generic, all purpose Rack server, but good for further experimentation, research and open for improvement.
+This is currently mainly a technical demonstration, demonstrating the speed of the [Opal Ruby](https://github.com/opal/opal) implementation employing [Node](https://nodejs.org/en) and [uWebSocketJs](https://github.com/uNetworking/uWebSockets.js) as runtime. Its not yet a generic, all purpose Rack server, but good for further experimentation, research and open for improvement.
 
 ## Getting started
 
@@ -124,6 +122,6 @@ To try:
 
 ## About the benchmarks and Opal/Up! performance
 
-The "hello world" benchmark result demonstrates the great potential of using Opal/Node with uWebSocketsJs on the server for executing ruby, however, the `envt.to_s` benchmark column next to it also shows, that its still possible to trigger sweet spots in Opal, that can make things a bit slow. Work continues to improve things.
+The "hello world" benchmark results above demonstrates the great potential of using Opal/Node with uWebSocketsJs on the server for executing ruby, however, the `envt.to_s` benchmark column next to it (results marked with *) also shows, that its still possible to trigger sweet spots in Opal, that can make things a bit slow. Work continues to improve things.
 
 Link to bombardier, the tool used for benchmarking: [https://github.com/codesenberg/bombardier](https://github.com/codesenberg/bombardier)
