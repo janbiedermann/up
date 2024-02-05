@@ -43,7 +43,7 @@ Unicorn 6.1.0, 4 workers
 Agoo 2.15.8, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 1 thread
 Up! uWS 0.0.2, 1 worker
-Up! Node 0.0.2, 4 workers
+Up! Node 0.0.2, 1 worker
 Up! uWS cluster 0.0.2, 4 workers
 Up! Node cluster 0.0.2, 4 workers
 
