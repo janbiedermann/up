@@ -31,7 +31,7 @@ Iodine:               2.18 ms <<<         0.94 ms
 Up! node:            59.97 ms*            4.99 ms
 Up! uWS:             49.83 ms*            1.49 ms
 Up! node cluster:    18.83 ms*            2.04 ms
-Up! uWS cluster:     14.99 ms*             0.82 ms <<< fastest
+Up! uWS cluster:     14.99 ms*            0.82 ms <<< fastest
 
 running on Linux with:
 ruby 3.3.0, YJit enabled
