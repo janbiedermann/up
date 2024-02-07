@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+require 'up/cli'
+require 'up/ruby/server_cli'
+Up::CLI.call

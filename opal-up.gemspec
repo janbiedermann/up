@@ -9,13 +9,15 @@ Gem::Specification.new do |spec|
   spec.email         = ['jan@kursator.de']
 
   spec.summary       = 'Rack server for Opal'
-  spec.description   = 'High performance Rack server for Opal Ruby'
+  spec.description   = 'High performance Rack server for Opal and Ruby'
   spec.homepage      = ''
   spec.license       = 'MIT'
-  spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test_app|test|spec|features)/}) }
+  spec.files         = `git ls-files -- bin ext lib LICENSE README.md`.split("\n")
   spec.bindir        = 'bin'
-  spec.executables   = %w[up up_bun up_cluster up_node up_node_cluster]
+  spec.executables   = %w[up up_bun up_cluster up_node up_node_cluster up_ruby up_ruby_cluster]
   spec.require_paths = %w[lib]
+  spec.extensions    = %w[ext/up_ext/extconf.rb]
+  spec.required_ruby_version = '>= 3.0.0'
 
   spec.add_dependency 'logger', '~> 1.6.0'
   spec.add_dependency 'opal', '>= 1.8.2', '< 3.0.0'
@@ -23,5 +25,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'rackup', '>= 0.2.2', '< 3.0.0'
 
   spec.add_development_dependency 'rake', '~> 13.1.0'
+  spec.add_development_dependency 'rake-compiler', '~> 1.2.7'
   spec.add_development_dependency 'rspec', '~> 3.12.0'
 end

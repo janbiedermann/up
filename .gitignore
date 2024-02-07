@@ -3,3 +3,6 @@ Gemfile.lock
 package-lock.json
 package.json
 *.gem
+lib/up_ext.so
+lib/up_ext.bundle
+tmp
