@@ -17,8 +17,8 @@ Racer:            14640.34 req/s   8.90 ms        15354.14 req/s   8.44 ms
 Agoo:             51455.38 req/s   2.43 ms        89022.91 req/s   1.51 ms
 Iodine:           57257.21 req/s   2.18 ms <<<   132723.02 req/s   0.94 ms
 Up! node:          2096.64 req/s* 59.97 ms*       25041.14 req/s   4.99 ms
-Up! ruby:         10616.74 req/s  49.83 ms*       69388.90 req/s   1.49 ms
-Up! uWS:           2511.65 req/s* 11.76 ms        83853.44 req/s   1.80 ms
+Up! ruby:         10616.74 req/s  11.76 ms        69388.90 req/s   1.49 ms
+Up! uWS:           2511.65 req/s* 49.83 ms*       83853.44 req/s   1.80 ms
 Up! node cluster:  6627.05 req/s* 18.83 ms*       61320.38 req/s   2.04 ms
 Up! ruby cluster: 29807.97 req/s   4.19 ms       137782.65 req/s   0.91 ms
 Up! uWS cluster:   8328.87 req/s* 14.99 ms*      152865.96 req/s   0.82 ms <<<
