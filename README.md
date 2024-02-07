@@ -3,7 +3,7 @@
 
 # UP!
 
-A high performance Rack server for [Opal Ruby](https://github.com/opal/opal), Tech Demo
+A high performance Rack server for [Opal Ruby](https://opalrb.com/) and [Matz Ruby](https://www.ruby-lang.org/), Tech Demo
 
 ## Let Numbers speak first
 
