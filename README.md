@@ -72,8 +72,8 @@ For a Gemfile available from rubygems:
 
 Available with `bundle exec` within the example apps or if this gem is included in your Gemfile:
 
-- `up` - starts a single worker server using Opal with uWebSockets, fastest server
-- `up_cluster` - starts a cluster of workers using Opal with uWebSockets, still fast, depending on workload may be even faster than the single worker or not
+- `up` - starts a single worker server using Opal with uWebSockets
+- `up_cluster` - starts a cluster of workers using Opal with uWebSockets, fastest server
 - `up_node` - starts a single worker server using Opal with the standard Node HTTP(S) classes
 - `up_node_cluster` - starts a cluster of workers using Opal with the standard Node HTTP(S) classes, probably faster than `up_node`
 - `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
