@@ -8,34 +8,22 @@ A high performance Rack server for [Opal Ruby](https://github.com/opal/opal), Te
 ## Let Numbers speak first
 
 ```
-Response type:          env.to_s       "hello_world"
-Requests/Second:
-Puma:              9478.41 req/s      50822.38 req/s
-Unicorn:          12267.86 req/s      16329.68 req/s
-Falcon:           13569.35 req/s      24041.63 req/s
-Racer:            14640.34 req/s      15354.14 req/s
-Agoo:             51455.38 req/s      89022.91 req/s
-Iodine:           57257.21 req/s <<< 132723.02 req/s
-Up! node:          2096.64 req/s*     25041.14 req/s
-Up! ruby:         10616.74 req/s      69388.90 req/s
-Up! uWS:           2511.65 req/s*     83853.44 req/s
-Up! node cluster:  6627.05 req/s*     61320.38 req/s
-Up! ruby cluster: 29807.97 req/s     137782.65 req/s
-Up! uWS cluster:   8328.87 req/s*    152865.96 req/s <<< fastest
+Response type:               env.to_s                    "hello_world"
+                 Requests/Second   Latency       Requests/Second   Latency
+Puma:              9478.41 req/s  14.05 ms        50822.38 req/s   2.62 ms
+Unicorn:          12267.86 req/s  10.26 ms        16329.68 req/s   7.68 ms
+Falcon:           13569.35 req/s   9.32 ms        24041.63 req/s   5.26 ms
+Racer:            14640.34 req/s   8.90 ms        15354.14 req/s   8.44 ms
+Agoo:             51455.38 req/s   2.43 ms        89022.91 req/s   1.51 ms
+Iodine:           57257.21 req/s   2.18 ms <<<   132723.02 req/s   0.94 ms
+Up! node:          2096.64 req/s* 59.97 ms*       25041.14 req/s   4.99 ms
+Up! ruby:         10616.74 req/s  49.83 ms*       69388.90 req/s   1.49 ms
+Up! uWS:           2511.65 req/s* 11.76 ms        83853.44 req/s   1.80 ms
+Up! node cluster:  6627.05 req/s* 18.83 ms*       61320.38 req/s   2.04 ms
+Up! ruby cluster: 29807.97 req/s   4.19 ms       137782.65 req/s   0.91 ms
+Up! uWS cluster:   8328.87 req/s* 14.99 ms*      152865.96 req/s   0.82 ms <<<
 
-Latency:
-Puma:                14.05 ms             2.62 ms
-Unicorn:             10.26 ms             7.68 ms
-Falcon:               9.32 ms             5.26 ms
-Racer:                8.90 ms             8.44 ms
-Agoo:                 2.43 ms             1.51 ms
-Iodine:               2.18 ms <<<         0.94 ms
-Up! node:            59.97 ms*            4.99 ms
-Up! uWS:             49.83 ms*            1.49 ms
-Up! ruby:            11.76 ms             1.80 ms
-Up! node cluster:    18.83 ms*            2.04 ms
-Up! ruby cluster:     4.19 ms             0.91 ms
-Up! uWS cluster:     14.99 ms*            0.82 ms <<< fastest
+<<< denotes the fastest for the response type          
 
 running on/with:
 Linux, Kernel 6.5.0-x
@@ -64,7 +52,7 @@ on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 
 ## Introduction
 
-This is currently mainly a technical demonstration, demonstrating the speed of the [Opal Ruby](https://github.com/opal/opal) implementation employing [Node](https://nodejs.org/en) and [uWebSocketJs](https://github.com/uNetworking/uWebSockets.js) as runtime. Its not yet a generic, all purpose Rack server, but good for further experimentation, research and open for improvement.
+This is currently mainly a technical demonstration, demonstrating the speed of the [Opal Ruby](https://github.com/opal/opal) implementation employing [Node](https://nodejs.org/en) and [uWebSocketJs](https://github.com/uNetworking/uWebSockets.js) as runtime. Its not yet a generic, all purpose Rack server, but good for further experimentation, research and open for improvement. The included ruby version allows for verification of code correctness and performance. If it works with `bundle exec up_ruby` it should work equally well with the various Opal versions.
 
 ## Getting started
 
@@ -82,15 +70,15 @@ For a Gemfile available from rubygems:
 
 ## Available Commands
 
-Available with `bundle exec` within the example apps or if this gem  is included in your Gemfile:
+Available with `bundle exec` within the example apps or if this gem is included in your Gemfile:
 
 - `up` - starts a single worker server using Opal with uWebSockets, fastest server
 - `up_cluster` - starts a cluster of workers using Opal with uWebSockets, still fast, depending on workload may be even faster than the single worker or not
 - `up_node` - starts a single worker server using Opal with the standard Node HTTP(S) classes
 - `up_node_cluster` - starts a cluster of workers using Opal with the standard Node HTTP(S) classes, probably faster than `up_node`
 - `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
-- `up_ruby` - starts a single worker using Ruby with uWebSockets in a native extension
-- `up_ruby_cluster` - starts a cluster of workers using Ruby with uWebSockets in a native extension
+- `up_ruby` - starts a single worker using Ruby with uWebSockets in a native extension, does not support the --secure option/TLS
+- `up_ruby_cluster` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
 
 ```
 Usage: up [options]
