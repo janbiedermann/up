@@ -23,26 +23,14 @@ module Up
         self[key] = case key
                     when 'rack.errors'
                       STDERR
-                    when 'rack.hijack'
-                      nil
-                    when 'rack.hijack?'
-                      false
-                    when 'rack.input'
-                      ::IO.new
                     when 'rack.logger'
-                      ::Logger.new(self['rack.errors'])
+                      @config[:logger]
                     when 'rack.multipart.buffer_size'
                       4096
                     when 'rack.multipart.tempfile_factory'
                       proc { |_filename, _content_type| File.new }
-                    when 'rack.response_finished'
-                      []
                     when 'rack.session'
                       {}
-                    when 'rack.upgrade'
-                      nil
-                    when 'rack.upgrade?'
-                      nil
                     when 'rack.url_scheme'
                       @config[:scheme]
                     when 'PATH_INFO'
