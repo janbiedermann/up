@@ -32,6 +32,9 @@ module Up
         on('-k', '--key-file FILE', String, 'File with the servers certificate') do |key_file|
           options[:key_file] = key_file
         end
+        on('-l', '--log-file FILE', String, 'log file') do |log_file|
+          options[:logger] = Logger.new(File.new(log_file, 'a+'))
+        end
         on('-v', '--version', 'Show version') do
           puts "Up! v#{Up::VERSION}"
           exit
