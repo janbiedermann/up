@@ -1,4 +1,3 @@
-require 'up/ruby/rack_env'
 require 'up_ext'
 
 module Up
