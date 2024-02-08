@@ -29,16 +29,13 @@ module Up
       %x{
         self.handle_headers = function(rack_headers, uws_res) {
           if (rack_headers.$$is_hash) {
-            var header, k, v;
+            var header, v;
             for(header of rack_headers) {
-              k = header[0];
-              if (!k.startsWith('rack.')) {
-                v = header[1];
-                if (v.$$is_array) {
-                  v = v.join("\n");
-                }
-                uws_res.writeHeader(k, v);
+              v = header[1];
+              if (v.$$is_array) {
+                v = v.join("\n");
               }
+              uws_res.writeHeader(header[0].toLowerCase(), v);
             }
           }
         }
