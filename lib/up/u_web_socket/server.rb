@@ -1,6 +1,7 @@
 # backtick_javascript: true
 require 'logger'
 require 'up/cli'
+require 'up/u_web_socket/client'
 
 %x{
   module.paths.push(process.cwd() + '/node_modules');
@@ -48,39 +49,94 @@ module Up
           }
           #{`parts`.close if `parts`.respond_to?(:close)}
         }
+
+        self.prepare_env = function(req) {
+          const env = new Map();
+          env.set('rack.errors',#{STDERR});
+          env.set('rack.input', #@default_input);
+          env.set('rack.logger', #@logger);
+          env.set('rack.multipart.buffer_size', 4096);
+          env.set('rack.multipart.tempfile_factory', #@t_factory);
+          env.set('rack.url_scheme', #@scheme);
+          env.set('SCRIPT_NAME', "");
+          env.set('SERVER_PROTOCOL', 'HTTP/1.1');
+          env.set('HTTP_VERSION', 'HTTP/1.1');
+          env.set('SERVER_NAME', #@host);
+          env.set('SERVER_PORT', #@port);
+          env.set('QUERY_STRING', req.getQuery());
+          env.set('REQUEST_METHOD', req.getMethod().toUpperCase());
+          env.set('PATH_INFO', req.getUrl());
+          req.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
+          return env;
+        }
       }
 
       def listen
         raise "already running" if @server
         %x{
           const ouws = Opal.Up.UWebSocket.Server;
+          const ouwc = Opal.Up.UWebSocket.Client;
+          const deco = new TextDecoder();
           if (#@scheme == 'https') {
             #@server = uws.SSLApp({ ca_file_name: #@ca_file, cert_file_name: #@cert_file, key_file_name: #@key_file });
           } else {
             #@server = uws.App();
           }
           #@server.any('/*', (res, req) => {
-            const env = new Map();
-            env.set('rack.errors',#{STDERR});
-            env.set('rack.input', #@default_input);
-            env.set('rack.logger', #@logger);
-            env.set('rack.multipart.buffer_size', 4096);
-            env.set('rack.multipart.tempfile_factory', #@t_factory);
-            env.set('rack.url_scheme', #@scheme);
-            env.set('SCRIPT_NAME', "");
-            env.set('SERVER_PROTOCOL', 'HTTP/1.1');
-            env.set('HTTP_VERSION', 'HTTP/1.1');
-            env.set('SERVER_NAME', #@host);
-            env.set('SERVER_PORT', #@port);
-            env.set('QUERY_STRING', req.getQuery());
-            env.set('REQUEST_METHOD', req.getMethod().toUpperCase());
-            env.set('PATH_INFO', req.getUrl());
-            req.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
-            const rack_res = #@app.$call(env);
+            const rack_res = #@app.$call(ouws.prepare_env(req));
             res.writeStatus(rack_res[0].toString() + ' OK');
             ouws.handle_headers(rack_res[1], res);
             ouws.handle_response(rack_res[2], res);
             res.end();
+          });
+          #@server.ws('/*', {
+            close: (ws, code, message) => {
+              const user_data = ws.getUserData();
+              user_data.client.ws = ws;
+              user_data.client.open = false;
+              user_data.client.handler.$on_close(user_data.client);
+            },
+            message: (ws, message, isBinary) => {
+              const msg = deco.decode(message);
+              const user_data = ws.getUserData();
+              user_data.client.ws = ws;
+              user_data.client.handler.$on_message(user_data.client, msg);
+            },
+            open: (ws) => {
+              const user_data = ws.getUserData();
+              user_data.client.ws = ws;
+              user_data.client.open = true;
+              user_data.client.handler.$on_open(user_data.client);
+            },
+            sendPingsAutomatically: true,
+            upgrade: (res, req, context) => {
+              const env = ouws.prepare_env(req);
+              env.set('rack.upgrade?', #{:websocket});
+              const rack_res = #@app.$call(env);
+              const handler = env.get('rack.upgrade');
+              if (rack_res[0] < 300 && handler && handler !== nil) {
+                const client = ouwc.$new();
+                client.env = env;
+                client.open = false;
+                client.handler = handler
+                client.protocol = #{:websocket};
+                client.timeout = 120;
+                res.upgrade({ client: client },
+                  req.getHeader('sec-websocket-key'),
+                  req.getHeader('sec-websocket-protocol'),
+                  req.getHeader('sec-websocket-extensions'),
+                  context);
+              } else {
+                if (rack_res[0] >= 300) {
+                  env.delete('rack.upgrade');
+                }
+                res.writeStatus(rack_res[0].toString() + ' OK');
+                ouws.handle_headers(rack_res[1], res);
+                ouws.handle_response(rack_res[2], res);
+                res.end();
+              }
+            },
+
           });
           #@server.listen(#@port, #@host, () => { console.log(`Server is running on ${#@scheme}://${#@host}:${#@port}`)});
         }
