@@ -76,9 +76,9 @@ static inline long ltoa(char *dest, long value) {
 }
 
 VALUE up_internal_handle_part(RB_BLOCK_CALL_FUNC_ARGLIST(rpart, res)) {
-  Check_Type(rpart, T_STRING);
-  uws_res_write(USE_SSL, (uws_res_t *)res, RSTRING_PTR(rpart),
-                RSTRING_LEN(rpart));
+  if (TYPE(rpart) == T_STRING)
+    uws_res_write(USE_SSL, (uws_res_t *)res, RSTRING_PTR(rpart),
+                  RSTRING_LEN(rpart));
   return Qnil;
 }
 
@@ -94,13 +94,14 @@ typedef struct server_s {
 static void up_internal_req_header_handler(const char *h, size_t h_len,
                                            const char *v, size_t v_len,
                                            void *renv) {
-  char header_key[MAX_HEADER_KEY_BUF];
+  char header_key[MAX_HEADER_KEY_BUF] = {'H', 'T', 'T', 'P', '_', '\0'};
   if ((h_len + 5) > MAX_HEADER_KEY_LEN)
-    return;
-  memcpy(header_key, "HTTP_", 5);
+    h_len = MAX_HEADER_KEY_LEN - 5;
+
   for (size_t i = 0; i < h_len; ++i) {
     header_key[i + 5] = (h[i] == '-') ? '_' : to_upper(h[i]);
   }
+
   header_key[h_len + 5] = '\0';
   rb_hash_aset((VALUE)renv,
                rb_enc_str_new(header_key, h_len + 5, binary_encoding),
@@ -115,7 +116,6 @@ static void up_server_prepare_env(VALUE renv, uws_req_t *req) {
   char m[20];
   if (len > 19)
     len = 19;
-  memcpy(m, str, len);
   for (size_t i = 0; i < len; ++i) {
     m[i] = (str[i] == '-') ? '_' : to_upper(str[i]);
   }
@@ -136,6 +136,8 @@ static void up_server_prepare_env(VALUE renv, uws_req_t *req) {
 }
 
 static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
+  char header_key[MAX_HEADER_KEY_BUF];
+
   uws_res_t *res = (uws_res_t *)arg;
   int kt = TYPE(key), dt = TYPE(data);
   if (dt == T_NIL || kt == T_NIL)
@@ -164,10 +166,11 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
   char *data_s = RSTRING_PTR(data);
   int data_len = RSTRING_LEN(data);
 
-  key = rb_str_new(key_s, key_len);
-  key_s = RSTRING_PTR(key);
+  if (key_len > MAX_HEADER_KEY_LEN)
+    key_len = MAX_HEADER_KEY_LEN;
+
   for (int i = 0; i < key_len; ++i) {
-    key_s[i] = tolower(key_s[i]);
+    header_key[i] = tolower(key_s[i]);
   }
 
   // scan the value for newline (\n) delimiters
@@ -179,7 +182,8 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
     pos_s = memchr(pos_s, '\n', pos_e - pos_s);
     if (!pos_s)
       pos_s = pos_e;
-    uws_res_write_header(USE_SSL, res, key_s, key_len, start, pos_s - start);
+    uws_res_write_header(USE_SSL, res, header_key, key_len, start,
+                         pos_s - start);
     // move forward (skip the '\n' if exists)
     ++pos_s;
   }
@@ -400,7 +404,7 @@ static VALUE up_cluster_listen(VALUE self) {
   up_internal_check_arg_types(s->rapp, &s->host, &s->port);
 
   long i = sysconf(_SC_NPROCESSORS_ONLN);
-  pid_t pid;
+  pid_t pid = 0;
   for (; i > 1; i--) {
     pid = fork();
     if (pid > 0) {
