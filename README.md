@@ -10,44 +10,43 @@ A high performance Rack server for [Opal Ruby](https://opalrb.com/) and [Matz Ru
 ```
 Response type:               env.to_s                    "hello_world"
                  Requests/Second   Latency       Requests/Second   Latency
-Puma:              9478.41 req/s  14.05 ms        50822.38 req/s   2.62 ms
-Unicorn:          12267.86 req/s  10.26 ms        16329.68 req/s   7.68 ms
-Falcon:           13569.35 req/s   9.32 ms        24041.63 req/s   5.26 ms
-Racer:            14640.34 req/s   8.90 ms        15354.14 req/s   8.44 ms
-Agoo:             51455.38 req/s   2.43 ms        89022.91 req/s   1.51 ms
-Iodine:           57257.21 req/s   2.18 ms <<<   132723.02 req/s   0.94 ms
-Up! node:          2096.64 req/s* 59.97 ms*       25041.14 req/s   4.99 ms
-Up! ruby:         10616.74 req/s  11.76 ms        69388.90 req/s   1.49 ms
-Up! uWS:           2511.65 req/s* 49.83 ms*       83853.44 req/s   1.80 ms
-Up! node cluster:  6627.05 req/s* 18.83 ms*       61320.38 req/s   2.04 ms
-Up! ruby cluster: 29807.97 req/s   4.19 ms       137782.65 req/s   0.91 ms
-Up! uWS cluster:   8328.87 req/s* 14.99 ms*      152865.96 req/s   0.82 ms <<<
+Puma:              8884.53 req/s  15.18 ms        50822.38 req/s   2.62 ms
+Unicorn:          12302.35 req/s  10.22 ms        16329.68 req/s   7.68 ms
+Falcon:           13168.82 req/s   9.49 ms        24041.63 req/s   5.26 ms
+Racer:            14536.88 req/s   8.94 ms        15354.14 req/s   8.44 ms
+Agoo:             49078.57 req/s   2.54 ms        89022.91 req/s   1.51 ms
+Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
+Up! node:          5089.40 req/s  24.53 ms        24398.51 req/s   5.12 ms
+Up! ruby:         22144.33 req/s   5.64 ms        58704.09 req/s   2.14 ms
+Up! uWS:           6540.62 req/s  19.09 ms        78384.93 req/s   1.59 ms
+Up! node cluster: 16218.80 req/s   7.70 ms        61381.99 req/s   2.03 ms
+Up! ruby cluster: 53641.29 req/s   2.35 ms       130492.13 req/s   0.96 ms
+Up! uWS cluster:  20143.62 req/s   6.20 ms       148534.58 req/s   0.84 ms <<<
 
-<<< denotes the fastest for the response type          
+<<< denotes the fastest for the response type
 
 running on/with:
 Linux, Kernel 6.5.0-x
 ruby 3.3.0, YJit enabled
-Opal 2.0-dev with node v20.11.0
+Opal 2.0-dev as of 9. Feb 2024, with node v20.11.0
 Puma 6.4.2, 4 workers, 4 threads
 Falcon 0.43.0, 4 workers, 4 threads
 Racer 0.1.3, defaults
 Unicorn 6.1.0, 4 workers
 Agoo 2.15.8, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 1 thread
-Up! uWS 0.0.2, 1 worker
-Up! Node 0.0.2, 1 worker
-Up! Ruby 0.0.3, 1 worker
-Up! uWS cluster 0.0.2, 4 workers
-Up! Node cluster 0.0.2, 4 workers
-Up! Ruby cluster 0.0.3, 4 workers
+Up! uWS 0.0.4, 1 worker
+Up! Node 0.0.4, 1 worker
+Up! Ruby 0.0.4, 1 worker
+Up! uWS cluster 0.0.4, 4 workers
+Up! Node cluster 0.0.4, 4 workers
+Up! Ruby cluster 0.0.4, 4 workers
 
 running the example_rack_app from this repo, benchmarked with:
 bombardier http://localhost:3000/
+and taking the Avg
 
-on my old Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
-
-* please see section "About the benchmarks ..." below
+on a Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
 ```
 
 ## Introduction
@@ -94,6 +93,17 @@ When using secure sockets, the -a, -c and -k options must be provided
     -v, --version                    Show version
 
 ```
+## Supported Features
+
+Up! implements the [Rack Spec as of Rack 3.0](https://github.com/rack/rack/blob/main/SPEC.rdoc) with the following differences:
+- `rack.hijack` is not implemented, but `rack.upgrade` instead is, see below
+- `rack.input` is currently still missing
+- Tempfile support is currently incomplete, affecting a few keys in the Rack Env ('tempfile' missing in Opal).
+- Some Rack modules/classes still have issues when run in Opal and may not work as expected
+
+For Up! uWS running in Opal:
+Websockets are supported following [the Iodine 'rack.upgrade' Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-WebSocket-Draft.md)
+A example RackApp using WebSockets is provided in the 'example_rack_ws_app' directory
 
 ## Roda
 
@@ -117,8 +127,15 @@ To try:
 - [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
 - [Rack-Session patches](https://github.com/rack/rack-session/compare/main...janbiedermann:rack-session:main)
 
-## About the benchmarks and Opal/Up! performance
+## Links
 
-The "hello world" benchmark results above demonstrates the great potential of using Opal/Node with uWebSocketsJs on the server for executing ruby, however, the `envt.to_s` benchmark column next to it (results marked with *) also shows, that its still possible to trigger sweet spots in Opal, that can make things a bit slow. Work continues to improve things.
+- bombardier, the tool used for benchmarking: [https://github.com/codesenberg/bombardier](https://github.com/codesenberg/bombardier)
 
-Link to bombardier, the tool used for benchmarking: [https://github.com/codesenberg/bombardier](https://github.com/codesenberg/bombardier)
+### Rack Servers
+
+- [Agoo](https://github.com/ohler55/agoo)
+- [Falcon](https://github.com/socketry/falcon)
+- [Iodine](https://github.com/boazsegev/iodine)
+- [Puma](https://github.com/puma/puma)
+- [Racer](https://rubygems.org/gems/racer) (a bit old, but included here, because it uses libuv, just like Node)
+- [Unicorn](https://yhbt.net/unicorn/)
