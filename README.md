@@ -127,6 +127,14 @@ To try:
 - [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
 - [Rack-Session patches](https://github.com/rack/rack-session/compare/main...janbiedermann:rack-session:main)
 
+## About the Benchmarks
+
+The benchmarks mainly test the overhead introduced by the rack server. 
+
+In the 'env.to_s' benchmark, the Rack environment access and response header handling overhead are measured. Simply calling env.to_s accesses all keys and serializes them briefly. If the Rack app accesses the keys of the Rack environment and sets response headers, the overhead/latency as measured can be expected, or that amount of requests per second can be expected at most.
+
+The "hello_world" benchmark measures the overhead for the simplest possible version of a meaningful Rack response and should provide maximum performance. If the Rack app just replies with a string, that overhead/latency can be expected, or that amount of requests per second can be expected at most.
+
 ## Links
 
 - bombardier, the tool used for benchmarking: [https://github.com/codesenberg/bombardier](https://github.com/codesenberg/bombardier)
