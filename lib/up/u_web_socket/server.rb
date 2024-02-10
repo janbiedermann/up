@@ -1,7 +1,7 @@
 # backtick_javascript: true
 require 'logger'
 require 'up/cli'
-require 'up/u_web_socket/client'
+require 'up/client'
 
 %x{
   module.paths.push(process.cwd() + '/node_modules');
@@ -75,7 +75,7 @@ module Up
         raise "already running" if @server
         %x{
           const ouws = Opal.Up.UWebSocket.Server;
-          const ouwc = Opal.Up.UWebSocket.Client;
+          const ouwc = Opal.Up.Client;
           const deco = new TextDecoder();
           if (#@scheme == 'https') {
             #@server = uws.SSLApp({ ca_file_name: #@ca_file, cert_file_name: #@cert_file, key_file_name: #@key_file });

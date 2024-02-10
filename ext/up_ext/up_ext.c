@@ -12,15 +12,24 @@ static VALUE mUp;
 static VALUE mRuby;
 static VALUE cServer;
 static VALUE cCluster;
+static VALUE cClient;
 static VALUE cStringIO;
 static VALUE cLogger;
 
+static ID at_env;
+static ID at_handler;
+static ID at_open;
+static ID at_protocol;
+static ID at_timeout;
 static ID id_app;
 static ID id_call;
 static ID id_close;
 static ID id_each;
 static ID id_host;
 static ID id_logger;
+static ID id_on_close;
+static ID id_on_message;
+static ID id_on_open;
 static ID id_port;
 
 static rb_encoding *utf8_encoding;
@@ -35,6 +44,9 @@ static VALUE empty_string;
 static VALUE http11;
 static VALUE rack_input;
 static VALUE rack_logger;
+static VALUE rack_upgrade_q;
+static VALUE rack_upgrade;
+static VALUE sym_websocket;
 
 static VALUE HTTP_VERSION;
 static VALUE PATH_INFO;
@@ -49,6 +61,10 @@ static VALUE SERVER_PROTOCOL;
   rb_gc_register_address(&gl_name);                                            \
   (gl_name) = rb_enc_str_new((str), strlen((str)), binary_encoding);           \
   rb_obj_freeze(gl_name);
+
+#define set_sym_val(gl_name, str)                                              \
+  rb_gc_register_address(&gl_name);                                            \
+  (gl_name) = ID2SYM(rb_intern(str));
 
 #define set_global(global_name) set_str_val((global_name), #global_name)
 
@@ -194,11 +210,54 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
   RB_GC_GUARD(data);
 }
 
+static bool up_internal_set_response_status(uws_res_t *res, VALUE rstatus) {
+  char status[10];
+  int type = TYPE(rstatus);
+  long a_long;
+  if (type == T_FIXNUM) {
+    a_long = FIX2INT(rstatus);
+    if (a_long < 0 || a_long > 999)
+      return false;
+    a_long = ltoa(status, a_long);
+  } else if (type == T_STRING) {
+    a_long = RSTRING_LEN(rstatus);
+    if (a_long > 6)
+      a_long = 6;
+    memcpy(status, RSTRING_PTR(rstatus), a_long);
+  } else {
+    return false;
+  }
+  memcpy(status + a_long, " OK", 4); // copy the '\0' too
+  uws_res_write_status(USE_SSL, res, status, a_long + 3);
+  return true;
+}
+
+static bool up_internal_collect_response_body(uws_res_t *res, VALUE rparts) {
+  VALUE rpart;
+  if (TYPE(rparts) == T_ARRAY) {
+    long i, l = RARRAY_LEN(rparts);
+    for (i = 0; i < l; i++) {
+      rpart = rb_ary_entry(rparts, i);
+      if (TYPE(rpart) != T_STRING)
+        return false;
+      uws_res_write(USE_SSL, res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
+    }
+  } else if (rb_respond_to(rparts, id_each)) {
+    rb_block_call(rparts, id_each, 0, NULL, up_internal_handle_part,
+                  (VALUE)res);
+  } else if (rb_respond_to(rparts, id_call)) {
+    rpart = rb_funcall(rparts, id_call, 0);
+    if (TYPE(rpart) != T_STRING)
+      return false;
+    uws_res_write(USE_SSL, res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
+  } else {
+    return false;
+  }
+  return true;
+}
+
 static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
                                       void *arg) {
-  int type;
-  long a_long = 0;
-
   // prepare rack env
   server_s *s = (server_s *)arg;
   VALUE renv = rb_hash_dup(s->env_template);
@@ -211,24 +270,9 @@ static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
     goto response_error;
 
   // response status
-  char status[10];
   VALUE rstatus = rb_ary_entry(rres, 0);
-  type = TYPE(rstatus);
-  if (type == T_FIXNUM) {
-    a_long = FIX2INT(rstatus);
-    if (a_long < 0 || a_long > 999)
-      goto response_error;
-    a_long = ltoa(status, a_long);
-  } else if (type == T_STRING) {
-    a_long = RSTRING_LEN(rstatus);
-    if (a_long > 6)
-      a_long = 6;
-    memcpy(status, RSTRING_PTR(rstatus), a_long);
-  } else {
+  if (!up_internal_set_response_status(res, rstatus))
     goto response_error;
-  }
-  memcpy(status + a_long, " OK", 4); // copy the '\0' too
-  uws_res_write_status(USE_SSL, res, status, a_long + 3);
 
   // collect headers
   VALUE rheaders = rb_ary_entry(rres, 1);
@@ -238,26 +282,7 @@ static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
 
   // collect response body
   VALUE rparts = rb_ary_entry(rres, 2);
-  VALUE rpart;
-  if (TYPE(rparts) == T_ARRAY) {
-    long i, l = RARRAY_LEN(rparts);
-    for (i = 0; i < l; i++) {
-      rpart = rb_ary_entry(rparts, i);
-      if (TYPE(rpart) != T_STRING)
-        goto response_error;
-      uws_res_write(USE_SSL, res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
-    }
-  } else if (rb_respond_to(rparts, id_each)) {
-    rb_block_call(rparts, id_each, 0, NULL, up_internal_handle_part,
-                  (VALUE)res);
-  } else if (rb_respond_to(rparts, id_call)) {
-    rpart = rb_funcall(rparts, id_call, 0);
-    if (TYPE(rpart) != T_STRING)
-      goto response_error;
-    uws_res_write(USE_SSL, res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
-  } else {
-    goto response_error;
-  }
+  up_internal_collect_response_body(res, rparts);
 
   // end response
   uws_res_end_without_body(USE_SSL, res, false);
@@ -267,7 +292,6 @@ static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
     rb_funcall(rparts, id_close, 0);
 
   return;
-
   RB_GC_GUARD(rstatus);
   RB_GC_GUARD(rheaders);
   RB_GC_GUARD(rres);
@@ -275,7 +299,6 @@ static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
 response_error:
   fprintf(stderr, "response error\n");
   uws_res_end_without_body(USE_SSL, res, false);
-  return;
 }
 
 static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
@@ -284,6 +307,49 @@ static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
   if (listen_socket)
     fprintf(stderr, "Server is running on http://%s:%d\n", config.host,
             config.port);
+}
+
+const rb_data_type_t up_client_t = {.wrap_struct_name = "Up::Client",
+                                    .function = {.dmark = NULL,
+                                                 .dfree = NULL,
+                                                 .dsize = NULL,
+                                                 .dcompact = NULL,
+                                                 .reserved = {0}},
+                                    .parent = NULL,
+                                    .data = NULL,
+                                    .flags = 0};
+
+static VALUE up_client_alloc(VALUE rclass) {
+  return TypedData_Wrap_Struct(rclass, &up_client_t, NULL);
+}
+
+static VALUE up_client_close(VALUE self) {
+  uws_websocket_t *ws = DATA_PTR(self);
+  rb_ivar_set(self, at_open, Qfalse);
+  if (ws)
+    uws_ws_close(USE_SSL, ws);
+  return Qnil;
+}
+
+static VALUE up_client_write(VALUE self, VALUE rdata) {
+  uws_websocket_t *ws = DATA_PTR(self);
+  if (!ws)
+    rb_raise(rb_eStandardError, "socket closed, can't write");
+  if (TYPE(rdata) != T_STRING)
+    rdata = rb_obj_as_string(rdata);
+  if (TYPE(rdata) != T_STRING)
+    rb_raise(rb_eTypeError,
+             "rdata not a string or cannot be converted to a string");
+  int opcode = rb_enc_get(rdata) == binary_encoding ? BINARY : TEXT;
+  return INT2FIX(
+      uws_ws_send(USE_SSL, ws, RSTRING_PTR(rdata), RSTRING_LEN(rdata), opcode));
+}
+
+static VALUE up_client_pending(VALUE self) {
+  uws_websocket_t *ws = DATA_PTR(self);
+  if (ws)
+    return INT2FIX(uws_ws_get_buffered_amount(USE_SSL, ws));
+  return INT2FIX(0);
 }
 
 static void up_server_t_free(void *p) {
@@ -353,6 +419,137 @@ static VALUE up_server_init(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
+void up_ws_drain_handler(uws_websocket_t *ws, void *user_data) {
+  /* Check uws_ws_get_buffered_amount(ws) here */
+}
+
+void up_ws_ping_handler(uws_websocket_t *ws, const char *message, size_t length,
+                        void *user_data) {
+  /* You don't need to handle this one, we automatically respond to pings as per
+   * standard */
+}
+
+void up_ws_pong_handler(uws_websocket_t *ws, const char *message, size_t length,
+                        void *user_data) {
+  /* You don't need to handle this one either */
+}
+
+static void up_ws_close_handler(uws_websocket_t *ws, int code,
+                                const char *message, size_t length,
+                                void *user_data) {
+  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
+  rb_ivar_set(*client, at_open, Qfalse);
+  DATA_PTR(*client) = ws;
+  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  rb_funcall(rhandler, id_on_close, 1, *client);
+  // rb_gc_unregister_address(client);
+  DATA_PTR(*client) = NULL;
+  free(client);
+}
+
+static void up_ws_message_handler(uws_websocket_t *ws, const char *message,
+                                  size_t length, uws_opcode_t opcode,
+                                  void *user_data) {
+  VALUE rmessage;
+  if (opcode == TEXT) {
+    rmessage = rb_enc_str_new(message, length, utf8_encoding);
+  } else if (opcode == BINARY) {
+    rmessage = rb_enc_str_new(message, length, binary_encoding);
+  } else {
+    return;
+  }
+  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
+  DATA_PTR(*client) = ws;
+  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  rb_funcall(rhandler, id_on_message, 2, *client, rmessage);
+  DATA_PTR(*client) = NULL;
+}
+
+static void up_ws_open_handler(uws_websocket_t *ws, void *user_data) {
+  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
+  rb_ivar_set(*client, at_open, Qtrue);
+  DATA_PTR(*client) = ws;
+  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  rb_funcall(rhandler, id_on_open, 1, *client);
+  DATA_PTR(*client) = NULL;
+}
+
+static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
+                                  uws_socket_context_t *context, void *arg) {
+  server_s *s = (server_s *)arg;
+  // prepare rack env
+  VALUE renv = rb_hash_dup(s->env_template);
+  up_server_prepare_env(renv, req);
+  rb_hash_aset(renv, rack_upgrade_q, sym_websocket);
+
+  // call app
+  VALUE rres = rb_funcall(s->rapp, id_call, 1, renv);
+
+  if (TYPE(rres) != T_ARRAY)
+    goto upgrade_error;
+
+  // response status
+  VALUE rstatus = rb_ary_entry(rres, 0);
+  int st = FIX2INT(rstatus);
+
+  VALUE rhandler = rb_hash_lookup2(renv, rack_upgrade, Qundef);
+  if (st >= 0 && st < 300 && rhandler != Qundef && rhandler != Qnil) {
+    // upgrade
+
+    VALUE *client = malloc(sizeof(VALUE));
+    // rb_gc_register_address(client);
+    *client = rb_class_new_instance(0, NULL, cClient);
+    rb_ivar_set(*client, at_env, renv);
+    rb_ivar_set(*client, at_open, false);
+    rb_ivar_set(*client, at_handler, rhandler);
+    rb_ivar_set(*client, at_protocol, sym_websocket);
+    rb_ivar_set(*client, at_timeout, INT2FIX(120));
+
+    const char *ws_key = NULL;
+    const char *ws_protocol = NULL;
+    const char *ws_extensions = NULL;
+    size_t ws_key_length =
+        uws_req_get_header(req, "sec-websocket-key", 17, &ws_key);
+    size_t ws_protocol_length =
+        uws_req_get_header(req, "sec-websocket-protocol", 22, &ws_protocol);
+    size_t ws_extensions_length =
+        uws_req_get_header(req, "sec-websocket-extensions", 24, &ws_extensions);
+    uws_res_upgrade(USE_SSL, res, (void *)client, ws_key, ws_key_length,
+                    ws_protocol, ws_protocol_length, ws_extensions,
+                    ws_extensions_length, context);
+  } else {
+    // treat as normal request
+    // response status
+    if (!up_internal_set_response_status(res, rstatus))
+      goto upgrade_error;
+
+    // collect headers
+    VALUE rheaders = rb_ary_entry(rres, 1);
+    if (TYPE(rheaders) != T_HASH)
+      goto upgrade_error;
+    rb_hash_foreach(rheaders, up_internal_res_header_handler, (VALUE)res);
+
+    // collect response body
+    VALUE rparts = rb_ary_entry(rres, 2);
+    up_internal_collect_response_body(res, rparts);
+
+    // end response
+    uws_res_end_without_body(USE_SSL, res, false);
+
+    // close resources if necessary
+    if (rb_respond_to(rparts, id_close))
+      rb_funcall(rparts, id_close, 0);
+
+    RB_GC_GUARD(rheaders);
+  }
+  return;
+  RB_GC_GUARD(rstatus);
+  RB_GC_GUARD(rres);
+  RB_GC_GUARD(renv);
+upgrade_error:
+  fprintf(stderr, "upgrade error");
+}
+
 static void up_server_run(server_s *s) {
   s->env_template = rb_hash_dup(rack_env_template);
   // When combined with SCRIPT_NAME and PATH_INFO, these variables can be used
@@ -373,6 +570,19 @@ static void up_server_run(server_s *s) {
   if (!s->app)
     rb_raise(rb_eRuntimeError, "could not init uws app");
   uws_app_any(USE_SSL, s->app, "/*", up_server_request_handler, (void *)s);
+  uws_ws(USE_SSL, s->app, "/*",
+         (uws_socket_behavior_t){.compression = DISABLED,
+                                 .maxPayloadLength = 5 * 1024 * 1024,
+                                 .idleTimeout = 120,
+                                 .upgrade = up_ws_upgrade_handler,
+                                 .open = up_ws_open_handler,
+                                 .message = up_ws_message_handler,
+                                 .close = up_ws_close_handler,
+                                 .drain = up_ws_drain_handler,
+                                 .ping = up_ws_ping_handler,
+                                 .pong = up_ws_pong_handler},
+         s);
+
   uws_app_listen_config_t config = {
       .port = FIX2INT(s->port), .host = RSTRING_PTR(s->host), .options = 0};
   uws_app_listen_with_config(USE_SSL, s->app, config, up_server_listen_handler,
@@ -442,7 +652,8 @@ void up_setup_rack_env_template(void) {
   // if present and true, indicates that the server supports partial hijacking
   // up_hash_set(rack_env_template, "rack.hijack?", Qfalse);
 
-  // The input stream is an IO-like object which contains the raw HTTP POST data
+  // The input stream is an IO-like object which contains the raw HTTP POST
+  // data
   rb_hash_aset(rack_env_template, rack_input, default_input);
 
   // A common object interface for logging messages
@@ -486,12 +697,20 @@ void up_setup_rack_env_template(void) {
 }
 
 void Init_up_ext(void) {
+  at_env = rb_intern("@env");
+  at_handler = rb_intern("@handler");
+  at_open = rb_intern("@open");
+  at_protocol = rb_intern("@protocol");
+  at_timeout = rb_intern("@timeout");
   id_app = rb_intern("app");
   id_call = rb_intern("call");
   id_close = rb_intern("close");
   id_each = rb_intern("each");
   id_host = rb_intern("host");
   id_logger = rb_intern("logger");
+  id_on_close = rb_intern("on_close");
+  id_on_message = rb_intern("on_message");
+  id_on_open = rb_intern("on_open");
   id_port = rb_intern("port");
 
   utf8_encoding = rb_enc_find("UTF-8");
@@ -501,6 +720,9 @@ void Init_up_ext(void) {
   set_str_val(http11, "HTTP/1.1");
   set_str_val(rack_input, "rack.input");
   set_str_val(rack_logger, "rack.logger");
+  set_str_val(rack_upgrade, "rack.upgrade");
+  set_str_val(rack_upgrade_q, "rack.upgrade?");
+  set_sym_val(sym_websocket, "websocket");
   set_global(HTTP_VERSION);
   set_global(PATH_INFO);
   set_global(QUERY_STRING);
@@ -527,6 +749,12 @@ void Init_up_ext(void) {
   up_setup_rack_env_template();
 
   mUp = rb_define_module("Up");
+  cClient = rb_define_class_under(mUp, "Client", rb_cObject);
+  rb_define_alloc_func(cClient, up_client_alloc);
+  rb_define_method(cClient, "close", up_client_close, 0);
+  rb_define_method(cClient, "pending", up_client_pending, 0);
+  rb_define_method(cClient, "write", up_client_write, 1);
+
   mRuby = rb_define_module_under(mUp, "Ruby");
 
   cServer = rb_define_class_under(mRuby, "Server", rb_cObject);
