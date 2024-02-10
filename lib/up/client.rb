@@ -4,11 +4,7 @@ module Up
   class Client
     # instance vars are set by the server
 
-    attr_reader :handler, :protocol, :timeout
-
-    def env
-      @env
-    end
+    attr_reader :env, :handler, :protocol, :timeout
 
     def handler=(h)
       @handler.on_close(self)
@@ -21,7 +17,7 @@ module Up
     end
 
     def pubsub?
-      false
+      true
     end
 
     if RUBY_ENGINE == 'opal'
@@ -31,7 +27,33 @@ module Up
       end
 
       def pending
+        return -1 unless @open
         `#@ws?.getBufferedAmount()`
+      end
+
+      def publish(channel, message, engine = nil)
+        res = false
+        raise 'publish engine not supported' if engine
+        %x{
+          if (!message.$$is_string) {
+            message = JSON.stringify(message);
+          }
+          res = #@ws?.publish(channel, message);
+          if (engine != false) {
+            // TODO: route to other processes
+          }
+        }
+      end
+
+      def subscribe(channel, is_pattern = false, &block)
+        raise 'pattern not supported for subscribe' if is_pattern
+        @sub_block = block
+        `#@ws?.subscribe(channel)`
+      end
+
+      def unsubscribe(channel, is_pattern = false)
+        raise 'pattern not supported for unsubscribe' if is_pattern
+        `#@ws?.unsubscribe(channel)`
       end
 
       def write(data)

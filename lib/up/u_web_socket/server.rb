@@ -92,21 +92,38 @@ module Up
           #@server.ws('/*', {
             close: (ws, code, message) => {
               const user_data = ws.getUserData();
-              user_data.client.ws = ws;
-              user_data.client.open = false;
-              user_data.client.handler.$on_close(user_data.client);
+              if (typeof(user_data.client.$on_close) === 'function') {
+                user_data.client.ws = ws;
+                user_data.client.open = false;
+                user_data.client.handler.$on_close(user_data.client);
+                user_data.client.ws = null;
+              }
+            },
+            drain: (ws) => {
+              const user_data = ws.getUserData();
+              if (typeof(user_data.client.$on_drained) === 'function') {
+                user_data.client.ws = ws;
+                user_data.client.handler.$on_drained(user_data.client);
+                user_data.client.ws = null;
+              }
             },
             message: (ws, message, isBinary) => {
-              const msg = deco.decode(message);
               const user_data = ws.getUserData();
-              user_data.client.ws = ws;
-              user_data.client.handler.$on_message(user_data.client, msg);
+              if (typeof(user_data.client.$on_message) === 'function') {
+                const msg = deco.decode(message);
+                user_data.client.ws = ws;
+                user_data.client.handler.$on_message(user_data.client, msg);
+                user_data.client.ws = null;
+              }
             },
             open: (ws) => {
               const user_data = ws.getUserData();
-              user_data.client.ws = ws;
-              user_data.client.open = true;
-              user_data.client.handler.$on_open(user_data.client);
+              if (typeof(user_data.client.$on_open) === 'function') {
+                user_data.client.ws = ws;
+                user_data.client.open = true;
+                user_data.client.handler.$on_open(user_data.client);
+                user_data.client.ws = null;
+              }
             },
             sendPingsAutomatically: true,
             upgrade: (res, req, context) => {

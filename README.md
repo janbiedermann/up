@@ -16,10 +16,8 @@ Falcon:           13168.82 req/s   9.49 ms        24041.63 req/s   5.26 ms
 Racer:            14536.88 req/s   8.94 ms        15354.14 req/s   8.44 ms
 Agoo:             49078.57 req/s   2.54 ms        89022.91 req/s   1.51 ms
 Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
-Up! node:          5089.40 req/s  24.53 ms        24398.51 req/s   5.12 ms
 Up! ruby:         22144.33 req/s   5.64 ms        58704.09 req/s   2.14 ms
 Up! uWS:           6540.62 req/s  19.09 ms        78384.93 req/s   1.59 ms
-Up! node cluster: 16218.80 req/s   7.70 ms        61381.99 req/s   2.03 ms
 Up! ruby cluster: 53641.29 req/s   2.35 ms       130492.13 req/s   0.96 ms
 Up! uWS cluster:  20143.62 req/s   6.20 ms       148534.58 req/s   0.84 ms <<<
 
@@ -105,8 +103,9 @@ Up! implements the [Rack Spec as of Rack 3.0](https://github.com/rack/rack/blob/
 - Tempfile support is currently incomplete, affecting a few keys in the Rack Env ('tempfile' missing in Opal).
 - Some Rack modules/classes still have issues when run in Opal and may not work as expected
 
-For Up! uWS running in Opal:
-Websockets are supported following [the Iodine 'rack.upgrade' Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-WebSocket-Draft.md)
+Websockets are supported following the [Iodine SPEC-WebSocket-Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-WebSocket-Draft.md).
+PubSub is supported following the [Iodine SPEC-PubSub-Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-PubSub-Draft.md), except for engines.
+
 A example RackApp using WebSockets is provided in the 'example_rack_ws_app' directory
 
 ## Roda
