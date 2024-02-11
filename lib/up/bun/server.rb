@@ -87,6 +87,7 @@ module Up
                   client.open = false;
                   client.handler = handler
                   client.protocol = #{:websocket};
+                  client.server = server;
                   client.timeout = 120;
                   server.upgrade(req, { data: { client: client }});
                   return;
