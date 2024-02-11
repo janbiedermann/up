@@ -2,6 +2,7 @@
 require 'up/u_web_socket/server'
 
 %x{
+  const process = require('node:process');
   const cluster = require('node:cluster');
   const num_workers = require('node:os').availableParallelism();
 }
@@ -19,10 +20,24 @@ module Up
         raise "already running" unless @members.empty?
         %x{
           if (cluster.isPrimary) {
+            cluster.on('message', (worker, message, handle) => {
+              if (message.c && message.m) {
+                for (let member of #@members) {
+                  if (member !== worker) {
+                    member.send(message);
+                  }
+                }
+              }
+            });
             for (let i = 0; i < #@workers; i++) {
-              #@members.push(cluster.fork());
+              #@members[i] = cluster.fork();
             }
           } else {
+            self.worker = true;
+            function process_message_handler(message, handle) {
+              self.server.publish(message.c, message.m);
+            }
+            process.on('message', process_message_handler);
             #{super}
           }
         }

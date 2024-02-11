@@ -2,9 +2,11 @@ module WSConnection
   class << self
     def on_open(client)
       puts "WebSocket connection established (#{client.object_id})."
+      client.subscribe(:a_channel)
     end
     def on_message(client, data)
       client.write data # echo the data back
+      client.publish(:a_channel, "sent to a_channel: #{data}") # and send it to a_channel
       puts "on_drained MUST be implemented if #{ client.pending } != 0."
     end
     def on_drained(client)

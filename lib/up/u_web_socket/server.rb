@@ -4,6 +4,7 @@ require 'up/cli'
 require 'up/client'
 
 %x{
+  const process = require('node:process');
   module.paths.push(process.cwd() + '/node_modules');
   const uws = require('uWebSockets.js');
 }
@@ -92,7 +93,7 @@ module Up
           #@server.ws('/*', {
             close: (ws, code, message) => {
               const user_data = ws.getUserData();
-              if (typeof(user_data.client.$on_close) === 'function') {
+              if (typeof(user_data.client.handler.$on_close) === 'function') {
                 user_data.client.ws = ws;
                 user_data.client.open = false;
                 user_data.client.handler.$on_close(user_data.client);
@@ -101,7 +102,7 @@ module Up
             },
             drain: (ws) => {
               const user_data = ws.getUserData();
-              if (typeof(user_data.client.$on_drained) === 'function') {
+              if (typeof(user_data.client.handler.$on_drained) === 'function') {
                 user_data.client.ws = ws;
                 user_data.client.handler.$on_drained(user_data.client);
                 user_data.client.ws = null;
@@ -109,7 +110,7 @@ module Up
             },
             message: (ws, message, isBinary) => {
               const user_data = ws.getUserData();
-              if (typeof(user_data.client.$on_message) === 'function') {
+              if (typeof(user_data.client.handler.$on_message) === 'function') {
                 const msg = deco.decode(message);
                 user_data.client.ws = ws;
                 user_data.client.handler.$on_message(user_data.client, msg);
@@ -118,7 +119,7 @@ module Up
             },
             open: (ws) => {
               const user_data = ws.getUserData();
-              if (typeof(user_data.client.$on_open) === 'function') {
+              if (typeof(user_data.client.handler.$on_open) === 'function') {
                 user_data.client.ws = ws;
                 user_data.client.open = true;
                 user_data.client.handler.$on_open(user_data.client);
@@ -138,6 +139,9 @@ module Up
                 client.handler = handler
                 client.protocol = #{:websocket};
                 client.timeout = 120;
+                if (self.worker) {
+                  client.worker = true;
+                }
                 res.upgrade({ client: client },
                   req.getHeader('sec-websocket-key'),
                   req.getHeader('sec-websocket-protocol'),

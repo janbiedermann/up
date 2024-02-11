@@ -1,4 +1,9 @@
 # backtick_javascript: true
+if RUBY_ENGINE == 'opal'
+  %x{
+    const process = require('node:process');
+  }
+end
 
 module Up
   class Client
@@ -39,10 +44,11 @@ module Up
             message = JSON.stringify(message);
           }
           res = #@ws?.publish(channel, message);
-          if (engine != false) {
-            // TODO: route to other processes
+          if (engine !== false && self.worker) {
+            process.send({c: channel, m: message});
           }
         }
+        res
       end
 
       def subscribe(channel, is_pattern = false, &block)
