@@ -16,6 +16,7 @@ Falcon:           13168.82 req/s   9.49 ms        24041.63 req/s   5.26 ms
 Racer:            14536.88 req/s   8.94 ms        15354.14 req/s   8.44 ms
 Agoo:             49078.57 req/s   2.54 ms        89022.91 req/s   1.51 ms
 Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
+Up! bun:           3900.44 req/s  32.00 ms        47334.16 req/s   2.64 ms
 Up! ruby:         22144.33 req/s   5.64 ms        58704.09 req/s   2.14 ms
 Up! uWS:           6540.62 req/s  19.09 ms        78384.93 req/s   1.59 ms
 Up! ruby cluster: 53641.29 req/s   2.35 ms       130492.13 req/s   0.96 ms
@@ -75,8 +76,6 @@ Available with `bundle exec` within the example apps or if this gem is included 
 
 - `up` - starts a single worker server using Opal with uWebSockets
 - `up_cluster` - starts a cluster of workers using Opal with uWebSockets, fastest server
-- `up_node` - starts a single worker server using Opal with the standard Node HTTP(S) classes
-- `up_node_cluster` - starts a cluster of workers using Opal with the standard Node HTTP(S) classes, probably faster than `up_node`
 - `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
 - `up_ruby` - starts a single worker using Ruby with uWebSockets in a native extension, does not support the --secure option/TLS
 - `up_ruby_cluster` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
