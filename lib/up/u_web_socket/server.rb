@@ -138,6 +138,7 @@ module Up
                 client.open = false;
                 client.handler = handler
                 client.protocol = #{:websocket};
+                client.server = self.server;
                 client.timeout = 120;
                 if (self.worker) {
                   client.worker = true;
