@@ -1,6 +1,7 @@
 # backtick_javascript: true
 require 'logger'
 require 'up/cli'
+require 'up/client'
 
 module Up
   module Bun
@@ -50,18 +51,23 @@ module Up
         raise "already running" if @server
         %x{
           const oubs = Opal.Up.Bun.Server;
-
+          const ouwc = Opal.Up.Client;
+          const deco = new TextDecoder();
           var server_options = {
             port: #@port,
             hostname: #@host,
             development: false,
-            fetch(req) {
+            fetch(req, server) {
+              const upgrade = req.headers.get('Upgrade');
               const env = new Map();
               env.set('rack.errors',#{STDERR});
               env.set('rack.input', #@default_input);
               env.set('rack.logger', #@logger);
               env.set('rack.multipart.buffer_size', 4096);
               env.set('rack.multipart.tempfile_factory', #@t_factory);
+              if (upgrade) {
+                env.set('rack.upgrade?', #{:websocket});
+              }
               env.set('rack.url_scheme', #@scheme);
               env.set('SCRIPT_NAME', "");
               env.set('SERVER_PROTOCOL', req.httpVersion);
@@ -71,14 +77,65 @@ module Up
               env.set('QUERY_STRING', "");
               env.set('REQUEST_METHOD', req.method);
               env.set('PATH_INFO', req.url);
-              var hdr, hds = req.headers;
-              for (hdr in hds) { env.set('HTTP_' + hdr.toUpperCase().replaceAll('-', '_'), hds[hdr]); }
+              req.headers.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
               const rack_res = #@app.$call(env);
+              if (upgrade) {
+                const handler = env.get('rack.upgrade');
+                if (rack_res[0] < 300 && handler && handler !== nil) {
+                  const client = ouwc.$new();
+                  client.env = env;
+                  client.open = false;
+                  client.handler = handler
+                  client.protocol = #{:websocket};
+                  client.timeout = 120;
+                  server.upgrade(req, { data: { client: client }});
+                  return;
+                }
+              }
               const hdrs = new Headers();
               oubs.handle_headers(rack_res[1], hdrs);
               var body = '';
               body = oubs.handle_response(rack_res[2], body);
               return new Response(body, {status: rack_res[0], statusText: 'OK', headers: hdrs});
+            },
+            websocket: {
+              close: (ws) => {
+                const client = ws.data.client;
+                if (typeof(client.handler.$on_close) === 'function') {
+                  client.ws = ws;
+                  client.open = false;
+                  client.handler.$on_close(client);
+                  client.ws = null;
+                }
+              },
+              drain: (ws) => {
+                const client = ws.data.client;
+                if (typeof(client.handler.$on_drained) === 'function') {
+                  client.ws = ws;
+                  client.handler.$on_drained(client);
+                  client.ws = null;
+                }
+              },
+              message: (ws, message) => {
+                const client = ws.data.client;
+                if (typeof(client.handler.$on_message) === 'function') {
+                  if (typeof(message) !== 'string') {
+                    message = deco.decode(message);
+                  }
+                  client.ws = ws;
+                  client.handler.$on_message(client, message);
+                  client.ws = null;
+                }
+              },
+              open: (ws) => {
+                const client = ws.data.client;
+                if (typeof(client.handler.$on_open) === 'function') {
+                  client.ws = ws;
+                  client.open = true;
+                  client.handler.$on_open(client);
+                  client.ws = null;
+                }
+              } 
             }
           };
           if (#@scheme === 'https') {
