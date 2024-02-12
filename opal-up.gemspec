@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.license       = 'MIT'
   spec.files         = `git ls-files -- bin ext lib LICENSE README.md`.split("\n")
   spec.bindir        = 'bin'
-  spec.executables   = %w[up up_bun up_cluster up_node up_node_cluster up_ruby up_ruby_cluster]
+  spec.executables   = %w[up up_bun up_cluster up_ruby up_ruby_cluster]
   spec.require_paths = %w[lib]
   spec.extensions    = %w[ext/up_ext/extconf.rb]
   spec.required_ruby_version = '>= 3.0.0'
