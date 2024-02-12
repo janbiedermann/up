@@ -6,7 +6,7 @@ module WSConnection
     end
     def on_message(client, data)
       client.write data # echo the data back
-      client.publish(:a_channel, "sent to a_channel: #{data}") # and send it to a_channel
+      client.publish(:a_channel, "sent to a_channel: #{data} from #{Process.pid}") # and send it to a_channel
       puts "on_drained MUST be implemented if #{ client.pending } != 0."
     end
     def on_drained(client)
