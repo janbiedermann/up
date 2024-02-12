@@ -19,8 +19,8 @@ Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
 Up! bun:           3900.44 req/s  32.00 ms        47334.16 req/s   2.64 ms
 Up! ruby:         22144.33 req/s   5.64 ms        58704.09 req/s   2.14 ms
 Up! uWS:           6540.62 req/s  19.09 ms        78384.93 req/s   1.59 ms
-Up! ruby cluster: 53641.29 req/s   2.35 ms       130492.13 req/s   0.96 ms
-Up! uWS cluster:  20143.62 req/s   6.20 ms       148534.58 req/s   0.84 ms <<<
+Up! ruby cluster: 53641.29 req/s   2.35 ms       128237.52 req/s   0.97 ms
+Up! uWS cluster:  20143.62 req/s   6.20 ms       152353.97 req/s   0.82 ms <<<
 
 <<< denotes the fastest for the response type
 
@@ -97,7 +97,7 @@ When using secure sockets, the -a, -c and -k options must be provided
 ## Supported Features
 
 Up! implements the [Rack Spec as of Rack 3.0](https://github.com/rack/rack/blob/main/SPEC.rdoc) with the following differences:
-- `rack.hijack` is not implemented, but `rack.upgrade` instead is, see below
+- `rack.hijack` is not implemented, but `rack.upgrade` instead is, see "Websockets" below
 - `rack.input` is currently still missing
 - Tempfile support is currently incomplete, affecting a few keys in the Rack Env ('tempfile' missing in Opal).
 - Some Rack modules/classes still have issues when run in Opal and may not work as expected
@@ -105,14 +105,14 @@ Up! implements the [Rack Spec as of Rack 3.0](https://github.com/rack/rack/blob/
 Websockets are supported following the [Iodine SPEC-WebSocket-Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-WebSocket-Draft.md).
 PubSub is supported following the [Iodine SPEC-PubSub-Draft](https://github.com/boazsegev/iodine/blob/master/SPEC-PubSub-Draft.md), except for engines.
 
-A example RackApp using WebSockets is provided in the 'example_rack_ws_app' directory
+A example RackApp using WebSockets and PubSub is provided in the 'example_rack_ws_app' directory
 
 ## Roda
 
 A example app for Roda is provided and _appears_ working with the following patches applied:
 
 - [Changes required to make Roda _appear_ to work](https://github.com/jeremyevans/roda/compare/master...janbiedermann:roda:master)
-- [Changes required to make Rack _appear_ to work](https://github.com/janbiedermann/rack/commit/1dadea0f9813c2df94715052d2277af13f7d0c0c)
+- [Changes required to make Rack with Roda _appear_ to work](https://github.com/janbiedermann/rack/commit/1dadea0f9813c2df94715052d2277af13f7d0c0c)
 
 Please note the phrase "_appear_ to work" in above sentences.
 To try:
