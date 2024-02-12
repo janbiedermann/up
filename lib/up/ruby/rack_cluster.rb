@@ -1,4 +1,5 @@
 require 'up_ext'
+require 'up/ruby/cluster'
 
 module Up
   module Ruby

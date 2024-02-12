@@ -52,13 +52,11 @@ module Up
       end
 
       def subscribe(channel, is_pattern = false, &block)
-        raise 'pattern not supported for subscribe' if is_pattern
         @sub_block = block
         `#@ws?.subscribe(channel)`
       end
 
       def unsubscribe(channel, is_pattern = false)
-        raise 'pattern not supported for unsubscribe' if is_pattern
         `#@ws?.unsubscribe(channel)`
       end
 
