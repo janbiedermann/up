@@ -358,6 +358,15 @@ response_error:
   uws_res_end_without_body(USE_SSL, res, false);
 }
 
+static void
+up_server_cluster_listen_handler(struct us_listen_socket_t *listen_socket,
+                                 uws_app_listen_config_t config,
+                                 void *user_data) {
+  if (listen_socket)
+    fprintf(stderr, "Internal Cluster communication on http://localhost:%d\n",
+            config.port);
+}
+
 static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
                                      uws_app_listen_config_t config,
                                      void *user_data) {
@@ -761,7 +770,7 @@ static VALUE up_server_listen(VALUE self) {
     uws_app_listen_config_t config_internal = {
         .port = config.port + s->member_id, .host = "localhost", .options = 0};
     uws_app_listen_with_config(false, s->app, config_internal,
-                               up_server_listen_handler, NULL);
+                               up_server_cluster_listen_handler, NULL);
   }
   uws_app_any(USE_SSL, s->app, "/*", up_server_request_handler, (void *)s);
   uws_ws(USE_SSL, s->app, "/*",
