@@ -18,69 +18,76 @@
 #ifndef UWS_WEBSOCKETDATA_H
 #define UWS_WEBSOCKETDATA_H
 
-#include "WebSocketProtocol.h"
 #include "AsyncSocketData.h"
 #include "PerMessageDeflate.h"
 #include "TopicTree.h"
+#include "WebSocketProtocol.h"
 
 #include <string>
 
 namespace uWS {
 
 struct WebSocketData : AsyncSocketData<false>, WebSocketState<true> {
-    /* This guy has a lot of friends - why? */
-    template <bool, bool, typename> friend struct WebSocketContext;
-    template <bool, typename> friend struct WebSocketContextData;
-    template <bool, bool, typename> friend struct WebSocket;
-    template <bool> friend struct HttpContext;
+  /* This guy has a lot of friends - why? */
+  template <bool, bool, typename> friend struct WebSocketContext;
+  template <bool, typename> friend struct WebSocketContextData;
+  template <bool, bool, typename> friend struct WebSocket;
+  template <bool> friend struct HttpContext;
+
 private:
-    std::string fragmentBuffer;
-    unsigned int controlTipLength = 0;
-    bool isShuttingDown = 0;
-    bool hasTimedOut = false;
-    enum CompressionStatus : char {
-        DISABLED,
-        ENABLED,
-        COMPRESSED_FRAME
-    } compressionStatus;
+  std::string fragmentBuffer;
+  unsigned int controlTipLength = 0;
+  bool isShuttingDown = 0;
+  bool hasTimedOut = false;
+  enum CompressionStatus : char {
+    DISABLED,
+    ENABLED,
+    COMPRESSED_FRAME
+  } compressionStatus;
 
-    /* We might have a dedicated compressor */
-    DeflationStream *deflationStream = nullptr;
-    /* And / or a dedicated decompressor */
-    InflationStream *inflationStream = nullptr;
+  /* We might have a dedicated compressor */
+  DeflationStream *deflationStream = nullptr;
+  /* And / or a dedicated decompressor */
+  InflationStream *inflationStream = nullptr;
 
-    /* We could be a subscriber */
-    Subscriber *subscriber = nullptr;
+  /* We could be a subscriber */
+  Subscriber *subscriber = nullptr;
+
 public:
-    WebSocketData(bool perMessageDeflate, CompressOptions compressOptions, BackPressure &&backpressure) : AsyncSocketData<false>(std::move(backpressure)), WebSocketState<true>() {
-        compressionStatus = perMessageDeflate ? ENABLED : DISABLED;
+  WebSocketData(bool perMessageDeflate, CompressOptions compressOptions,
+                BackPressure &&backpressure)
+      : AsyncSocketData<false>(std::move(backpressure)),
+        WebSocketState<true>() {
+    compressionStatus = perMessageDeflate ? ENABLED : DISABLED;
 
-        /* Initialize the dedicated sliding window(s) */
-        if (perMessageDeflate) {
-            if ((compressOptions & CompressOptions::_COMPRESSOR_MASK) != CompressOptions::SHARED_COMPRESSOR) {
-                deflationStream = new DeflationStream(compressOptions);
-            }
-            if ((compressOptions & CompressOptions::_DECOMPRESSOR_MASK) != CompressOptions::SHARED_DECOMPRESSOR) {
-                inflationStream = new InflationStream(compressOptions);
-            }
-        }
+    /* Initialize the dedicated sliding window(s) */
+    if (perMessageDeflate) {
+      if ((compressOptions & CompressOptions::_COMPRESSOR_MASK) !=
+          CompressOptions::SHARED_COMPRESSOR) {
+        deflationStream = new DeflationStream(compressOptions);
+      }
+      if ((compressOptions & CompressOptions::_DECOMPRESSOR_MASK) !=
+          CompressOptions::SHARED_DECOMPRESSOR) {
+        inflationStream = new InflationStream(compressOptions);
+      }
+    }
+  }
+
+  ~WebSocketData() {
+    if (deflationStream) {
+      delete deflationStream;
     }
 
-    ~WebSocketData() {
-        if (deflationStream) {
-            delete deflationStream;
-        }
-
-        if (inflationStream) {
-            delete inflationStream;
-        }
-
-        if (subscriber) {
-            delete subscriber;
-        }
+    if (inflationStream) {
+      delete inflationStream;
     }
+
+    if (subscriber) {
+      delete subscriber;
+    }
+  }
 };
 
-}
+} // namespace uWS
 
 #endif // UWS_WEBSOCKETDATA_H

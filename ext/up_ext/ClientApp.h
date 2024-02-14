@@ -4,33 +4,30 @@
 
 namespace uWS {
 
-    struct WebSocketClientBehavior {
-        MoveOnlyFunction<void()> open;
-        MoveOnlyFunction<void()> message;
-        MoveOnlyFunction<void()> close;
-        //MoveOnlyFunction<void()> failed;
+struct WebSocketClientBehavior {
+  MoveOnlyFunction<void()> open;
+  MoveOnlyFunction<void()> message;
+  MoveOnlyFunction<void()> close;
+  // MoveOnlyFunction<void()> failed;
+};
 
-    };
+struct ClientApp {
 
-    struct ClientApp {
+  WebSocketContext<0, false, int> *webSocketContext;
+  // behöver ett nytt http context med minimal klient, som slår om till den
+  // riktiga websocketcontext om samma storlek på httpsocket och websocket blir
+  // det enkel övergång
 
-        WebSocketContext<0, false, int> *webSocketContext;
-        // behöver ett nytt http context med minimal klient, som slår om till den riktiga websocketcontext
-        // om samma storlek på httpsocket och websocket blir det enkel övergång
+  ClientApp(WebSocketClientBehavior &&behavior) {
+    // webSocketContext = WebSocketContext<0, false, int>::create();
+  }
 
-        ClientApp(WebSocketClientBehavior &&behavior) {
-            //webSocketContext = WebSocketContext<0, false, int>::create();
-        }
+  ClientApp &&connect(std::string url, std::string protocol = "") {
 
-        ClientApp &&connect(std::string url, std::string protocol = "") {
+    return std::move(*this);
+  }
 
-            return std::move(*this);
-        }
+  void run() {}
+};
 
-        void run() {
-
-        }
-
-    };
-
-}
+} // namespace uWS
