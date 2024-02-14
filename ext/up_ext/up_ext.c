@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <ruby.h>
 #include <ruby/encoding.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -64,6 +65,10 @@ static VALUE SCRIPT_NAME;
 static VALUE SERVER_NAME;
 static VALUE SERVER_PORT;
 static VALUE SERVER_PROTOCOL;
+
+// both used when worker of a cluster
+uws_app_t *cluster_app;
+struct us_listen_socket_t *cluster_socket;
 
 #define set_str_val(gl_name, str)                                              \
   rb_gc_register_address(&gl_name);                                            \
@@ -360,19 +365,21 @@ response_error:
 
 static void
 up_server_cluster_listen_handler(struct us_listen_socket_t *listen_socket,
-                                 uws_app_listen_config_t config,
-                                 void *user_data) {
-  if (listen_socket)
+                                 uws_app_listen_config_t config, void *arg) {
+  if (listen_socket) {
+    cluster_socket = listen_socket;
     fprintf(stderr, "Internal Cluster communication on http://localhost:%d\n",
             config.port);
+  }
 }
 
 static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
                                      uws_app_listen_config_t config,
-                                     void *user_data) {
-  if (listen_socket)
-    fprintf(stderr, "Server is running on http://%s:%d\n", config.host,
+                                     void *arg) {
+  if (listen_socket) {
+    fprintf(stderr, "Server is listening on http://%s:%d\n", config.host,
             config.port);
+  }
 }
 
 const rb_data_type_t up_client_t = {.wrap_struct_name = "Up::Client",
@@ -730,6 +737,13 @@ upgrade_error:
   fprintf(stderr, "upgrade error");
 }
 
+static void up_internal_close_sockets(int signal) {
+  if (cluster_socket)
+    us_listen_socket_close(false, cluster_socket);
+  if (cluster_app)
+    uws_app_close(USE_SSL, cluster_app);
+}
+
 static VALUE up_server_listen(VALUE self) {
   server_s *s = DATA_PTR(self);
   up_internal_check_arg_types(s->rapp, &s->host, &s->port);
@@ -756,8 +770,16 @@ static VALUE up_server_listen(VALUE self) {
       .port = FIX2INT(s->port), .host = RSTRING_PTR(s->host), .options = 0};
   VALUE rmember_id = rb_ivar_get(self, at_member_id);
   if (rmember_id != Qnil) {
+    // got a cluster
     s->member_id = FIX2INT(rmember_id);
-    // got a cluster, open publish ports
+    // install signal handler
+    cluster_app = s->app;
+    cluster_socket = NULL;
+    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
+                               .sa_flags = 0};
+    sigemptyset(&upclcl.sa_mask);
+    sigaction(SIGINT, &upclcl, NULL);
+    // open publish ports
     VALUE rworkers = rb_ivar_get(self, at_workers);
     s->workers = FIX2INT(rworkers);
     VALUE rsecret = rb_ivar_get(self, at_secret);
@@ -771,6 +793,13 @@ static VALUE up_server_listen(VALUE self) {
         .port = config.port + s->member_id, .host = "localhost", .options = 0};
     uws_app_listen_with_config(false, s->app, config_internal,
                                up_server_cluster_listen_handler, NULL);
+  } else {
+    cluster_app = s->app;
+    cluster_socket = NULL;
+    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
+                               .sa_flags = 0};
+    sigemptyset(&upclcl.sa_mask);
+    sigaction(SIGINT, &upclcl, NULL);
   }
   uws_app_any(USE_SSL, s->app, "/*", up_server_request_handler, (void *)s);
   uws_ws(USE_SSL, s->app, "/*",

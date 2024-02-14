@@ -21,18 +21,41 @@ module Up
             super
           end
         end
-
-        Process.waitall
-        @members.each do |member|
-          Process.kill("KILL", member)
+        unless @member_id
+          install_signal_handlers
+          Process.waitall
         end
       end
 
       def stop
         if Up::CLI::stoppable?
-          @members.each { |m| Process.kill(m) } 
-          @members.clear
+          kill_members
         end
+      end
+
+      private
+
+      def install_signal_handlers
+        Signal.trap('CHLD') do
+          warn "\nError: a cluster member died!"
+          kill_members
+        end
+        Signal.trap('INT') do
+          warn "\nReceived CTRL-C!"
+          kill_members
+        end
+      end
+
+      def kill_members
+        Signal.trap('CHLD', 'IGNORE')
+        STDERR.print "Stopping workers: "
+        @members.each do |mid|
+          Process.kill('INT', mid) rescue nil
+          STDERR.print '.'
+        end
+        @members.clear
+        warn "\nCluster stopped."
+        Signal.trap('CHLD', 'DEFAULT')
       end
     end
   end
