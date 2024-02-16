@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Jan Biedermann']
   spec.email         = ['jan@kursator.de']
 
-  spec.summary       = 'Rack server for Opal'
+  spec.summary       = 'Rack server for Opal and Ruby'
   spec.description   = 'High performance Rack server for Opal and Ruby'
-  spec.homepage      = ''
+  spec.homepage      = 'https://github.com/janbiedermann/up'
   spec.license       = 'MIT'
   spec.files         = `git ls-files -- bin ext lib LICENSE README.md`.split("\n")
   spec.bindir        = 'bin'
