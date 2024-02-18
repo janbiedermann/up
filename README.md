@@ -84,15 +84,16 @@ Available with `bundle exec` within the example apps or if this gem is included 
 Usage: up [options]
 
     -h, --help                       Show this message
-    -p, --port PORT                  Port number the server will listen to
-    -b, --bind ADDRESS               Address the server will listen to
+    -p, --port PORT                  Port number the server will listen to. Default: 3000
+    -b, --bind ADDRESS               Address the server will listen to. Default: localhost
     -s, --secure                     Use secure sockets.
 When using secure sockets, the -a, -c and -k options must be provided
     -a, --ca-file FILE               File with CA certs
     -c, --cert-file FILE             File with the servers certificate
     -k, --key-file FILE              File with the servers certificate
+    -l, --log-file FILE              Log file
     -v, --version                    Show version
-
+    -w, --workers NUMBER             For clusters, the number of workers to run. Default: number of processors
 ```
 ## Supported Features
 
