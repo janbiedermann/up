@@ -37,6 +37,7 @@ static ID id_close;
 static ID id_each;
 static ID id_host;
 static ID id_logger;
+static ID id_new;
 static ID id_on_close;
 static ID id_on_drained;
 static ID id_on_message;
@@ -122,6 +123,8 @@ typedef struct server_s {
   VALUE port;
   VALUE logger;
   VALUE env_template;
+  VALUE body;
+  VALUE env;
   int workers;
   int member_id;
   char secret[37];
@@ -283,54 +286,10 @@ typedef struct publish_data_s {
   server_s *s;
 } publish_data_s;
 
-static void up_internal_process_publish_post_data(uws_res_t *res,
-                                                  const char *chunk,
-                                                  size_t chunk_length,
-                                                  bool is_end, void *arg) {
-  server_s *s = (server_s *)arg;
-  const char *channel_start = chunk, *chunk_ptr = chunk,
-             *chunk_end = chunk + chunk_length, *message_start = NULL;
-  size_t channel_length = 0, message_length = 0;
-  for (; chunk_ptr < chunk_end; chunk_ptr++) {
-    if (*chunk_ptr == '\r') {
-      channel_length = chunk_ptr - chunk;
-      message_start = chunk + channel_length + 2;
-      message_length = chunk_length - 2 - channel_length;
-      break;
-    }
-  }
-  if (channel_length > 0 && message_length > 0) {
-    uws_publish(USE_SSL, s->app, channel_start, channel_length, message_start,
-                message_length, TEXT, false);
-  }
-}
-
-static void up_internal_publish_handler(uws_res_t *res, uws_req_t *req,
-                                        void *arg) {
-  server_s *s = (server_s *)arg;
-  // check for header
-  const char *secret;
-  uws_req_get_header(req, "secret", 6, &secret);
-  if (secret && (strncmp(s->secret, secret, 36) == 0)) {
-    // ok, requests origin knows the secret, continue processing
-    uws_res_on_data(false, res, up_internal_process_publish_post_data, arg);
-    uws_res_write_status(false, res, "200 OK", 6);
-    uws_res_end_without_body(false, res, true);
-  } else {
-    // don't know the secret? bugger off!
-    uws_res_end_without_body(false, res, true);
-  }
-}
-
-static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
-                                      void *arg) {
-  // prepare rack env
-  server_s *s = (server_s *)arg;
-  VALUE renv = rb_hash_dup(s->env_template);
-  up_server_prepare_env(renv, req);
-
+static void up_internal_call_app(server_s *s, uws_res_t *res, VALUE env) {
   // call app
-  VALUE rres = rb_funcall(s->rapp, id_call, 1, renv);
+  VALUE rres = rb_funcall(s->rapp, id_call, 1, env);
+
   if (TYPE(rres) != T_ARRAY)
     goto response_error;
 
@@ -357,13 +316,84 @@ static void up_server_request_handler(uws_res_t *res, uws_req_t *req,
     rb_funcall(rparts, id_close, 0);
 
   return;
-  RB_GC_GUARD(rstatus);
-  RB_GC_GUARD(rheaders);
-  RB_GC_GUARD(rres);
-  RB_GC_GUARD(renv);
 response_error:
   fprintf(stderr, "response error\n");
   uws_res_end_without_body(USE_SSL, res, false);
+}
+
+static void up_internal_abort_data(uws_res_t *res, void *arg) {}
+
+static void up_internal_process_publish_post_data(uws_res_t *res,
+                                                  const char *chunk,
+                                                  size_t chunk_length,
+                                                  bool is_end, void *arg) {
+  server_s *s = (server_s *)arg;
+  const char *channel_start = chunk, *chunk_ptr = chunk,
+             *chunk_end = chunk + chunk_length, *message_start = NULL;
+  size_t channel_length = 0, message_length = 0;
+  for (; chunk_ptr < chunk_end; chunk_ptr++) {
+    if (*chunk_ptr == '\r') {
+      channel_length = chunk_ptr - chunk;
+      message_start = chunk + channel_length + 2;
+      message_length = chunk_length - 2 - channel_length;
+      break;
+    }
+  }
+  if (channel_length > 0 && message_length > 0)
+    uws_publish(USE_SSL, s->app, channel_start, channel_length, message_start,
+                message_length, TEXT, false);
+}
+
+static void up_internal_process_post_data(uws_res_t *res, const char *chunk,
+                                          size_t chunk_length, bool is_end,
+                                          void *arg) {
+  server_s *s = (server_s *)arg;
+  rb_str_cat(s->body, chunk, chunk_length);
+  if (is_end) {
+    // set rack.input
+    rb_hash_aset(s->env, rack_input, rb_funcall(cStringIO, id_new, 1, s->body));
+    up_internal_call_app(s, res, s->env);
+    s->body = Qnil;
+    s->env = Qnil;
+  }
+}
+
+static void up_internal_publish_handler(uws_res_t *res, uws_req_t *req,
+                                        void *arg) {
+  server_s *s = (server_s *)arg;
+  // check for header
+  const char *secret;
+  uws_req_get_header(req, "secret", 6, &secret);
+  if (secret && (strncmp(s->secret, secret, 36) == 0)) {
+    // ok, requests origin knows the secret, continue processing
+    uws_res_on_data(false, res, up_internal_process_publish_post_data, arg);
+    uws_res_write_status(false, res, "200 OK", 6);
+    uws_res_end_without_body(false, res, true);
+  } else {
+    // don't know the secret? bugger off!
+    uws_res_end_without_body(false, res, true);
+  }
+}
+
+static void up_server_any_handler(uws_res_t *res, uws_req_t *req, void *arg) {
+  // prepare rack env
+  server_s *s = (server_s *)arg;
+  VALUE env = rb_hash_dup(s->env_template);
+  up_server_prepare_env(env, req);
+  up_internal_call_app(s, res, env);
+  RB_GC_GUARD(env);
+}
+
+static void up_server_post_handler(uws_res_t *res, uws_req_t *req, void *arg) {
+  // prepare rack env
+  server_s *s = (server_s *)arg;
+  s->env = rb_hash_dup(s->env_template);
+  up_server_prepare_env(s->env, req);
+
+  // receive POST data
+  s->body = rb_enc_str_new("", 0, utf8_encoding);
+  uws_res_on_data(USE_SSL, res, up_internal_process_post_data, (void *)s);
+  uws_res_on_aborted(USE_SSL, res, up_internal_abort_data, NULL);
 }
 
 static void
@@ -613,8 +643,8 @@ void up_ws_drain_handler(uws_websocket_t *ws, void *user_data) {
 
 void up_ws_ping_handler(uws_websocket_t *ws, const char *message, size_t length,
                         void *user_data) {
-  /* You don't need to handle this one, we automatically respond to pings as per
-   * standard */
+  /* You don't need to handle this one, we automatically respond to pings as
+   * per standard */
 }
 
 void up_ws_pong_handler(uws_websocket_t *ws, const char *message, size_t length,
@@ -807,7 +837,8 @@ static VALUE up_server_listen(VALUE self) {
     sigemptyset(&upclcl.sa_mask);
     sigaction(SIGINT, &upclcl, NULL);
   }
-  uws_app_any(USE_SSL, s->app, "/*", up_server_request_handler, (void *)s);
+  uws_app_post(USE_SSL, s->app, "/*", up_server_post_handler, (void *)s);
+  uws_app_any(USE_SSL, s->app, "/*", up_server_any_handler, (void *)s);
   uws_ws(USE_SSL, s->app, "/*",
          (uws_socket_behavior_t){.compression = DISABLED,
                                  .maxPayloadLength = 5 * 1024 * 1024,
@@ -949,6 +980,7 @@ void Init_up_ext(void) {
   id_each = rb_intern("each");
   id_host = rb_intern("host");
   id_logger = rb_intern("logger");
+  id_new = rb_intern("new");
   id_on_close = rb_intern("on_close");
   id_on_drained = rb_intern("on_drained");
   id_on_message = rb_intern("on_message");
@@ -980,14 +1012,14 @@ void Init_up_ext(void) {
   rb_gc_register_address(&cLogger);
   cLogger = rb_const_get(rb_cObject, rb_intern("Logger"));
   rb_gc_register_address(&default_logger);
-  default_logger = rb_funcall(cLogger, rb_intern("new"), 1, rb_stderr);
+  default_logger = rb_funcall(cLogger, id_new, 1, rb_stderr);
 
   rb_require("stringio");
 
   rb_gc_register_address(&cStringIO);
   cStringIO = rb_const_get(rb_cObject, rb_intern("StringIO"));
   rb_gc_register_address(&default_input);
-  default_input = rb_funcall(cStringIO, rb_intern("new"), 1, empty_string);
+  default_input = rb_funcall(cStringIO, id_new, 1, empty_string);
 
   up_setup_rack_env_template();
 

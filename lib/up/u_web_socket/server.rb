@@ -1,5 +1,6 @@
 # backtick_javascript: true
 require 'logger'
+require 'stringio'
 require 'up/cli'
 require 'up/client'
 
@@ -29,7 +30,7 @@ module Up
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
-        @default_input = IO.new
+        @default_input = StringIO.new('', 'r')
         @server    = nil
         @logger    = logger
         @t_factory = proc { |filename, _content_type| File.new(filename, 'a+') }
@@ -58,20 +59,20 @@ module Up
           #{`parts`.close if `parts`.respond_to?(:close)}
         }
 
-        self.prepare_env = function(req) {
+        self.prepare_env = function(req, ins) {
           const env = new Map();
           env.set('rack.errors',#{STDERR});
-          env.set('rack.input', #@default_input);
-          env.set('rack.logger', #@logger);
+          env.set('rack.input', ins.default_input);
+          env.set('rack.logger', ins.logger);
           env.set('rack.multipart.buffer_size', 4096);
-          env.set('rack.multipart.tempfile_factory', #@t_factory);
-          env.set('rack.url_scheme', #@scheme);
+          env.set('rack.multipart.tempfile_factory', ins.t_factory);
+          env.set('rack.url_scheme', ins.scheme);
           env.set('SCRIPT_NAME', "");
           env.set('SERVER_PROTOCOL', 'HTTP/1.1');
           env.set('HTTP_VERSION', 'HTTP/1.1');
-          env.set('SERVER_NAME', #@host);
-          env.set('SERVER_PORT', #@port);
-          env.set('QUERY_STRING', req.getQuery());
+          env.set('SERVER_NAME', ins.host);
+          env.set('SERVER_PORT', ins.port);
+          env.set('QUERY_STRING', req.getQuery() || '');
           env.set('REQUEST_METHOD', req.getMethod().toUpperCase());
           env.set('PATH_INFO', req.getUrl());
           req.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
@@ -91,8 +92,24 @@ module Up
           } else {
             #@server = uws.App();
           }
+          #@server.post('/*', (res, req) => {
+            const env = ouws.prepare_env(req, self);
+            let buffer = Buffer.from('');
+            res.onData((chunk, is_last) => {
+              buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+              if (is_last === true) {
+                env.set('rack.input', #{StringIO.new(`buffer.toString()`)});
+                const rack_res = #@app.$call(env);
+                res.writeStatus(rack_res[0].toString() + ' OK');
+                ouws.handle_headers(rack_res[1], res);
+                ouws.handle_response(rack_res[2], res);
+                res.end();
+              }
+            });
+            res.onAborted(() => {});
+          });
           #@server.any('/*', (res, req) => {
-            const rack_res = #@app.$call(ouws.prepare_env(req));
+            const rack_res = #@app.$call(ouws.prepare_env(req, self));
             res.writeStatus(rack_res[0].toString() + ' OK');
             ouws.handle_headers(rack_res[1], res);
             ouws.handle_response(rack_res[2], res);
@@ -136,7 +153,7 @@ module Up
             },
             sendPingsAutomatically: true,
             upgrade: (res, req, context) => {
-              const env = ouws.prepare_env(req);
+              const env = ouws.prepare_env(req, self);
               env.set('rack.upgrade?', #{:websocket});
               const rack_res = #@app.$call(env);
               const handler = env.get('rack.upgrade');

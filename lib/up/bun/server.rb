@@ -1,5 +1,6 @@
 # backtick_javascript: true
 require 'logger'
+require 'stringio'
 require 'up/cli'
 require 'up/client'
 
@@ -23,7 +24,7 @@ module Up
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
-        @default_input = IO.new
+        @default_input = StringIO.new('', 'r')
         @server    = nil
         @logger    = logger
         @t_factory = proc { |filename, _content_type| File.new(filename, 'a+') }
@@ -65,11 +66,17 @@ module Up
             port: #@port,
             hostname: #@host,
             development: false,
-            fetch(req, server) {
+            async fetch(req, server) {
               const upgrade = req.headers.get('Upgrade');
               const env = new Map();
               env.set('rack.errors',#{STDERR});
-              env.set('rack.input', #@default_input);
+              if (req.method === 'POST') {
+                let body = await req.text();
+                console.log('received: ', body);
+                env.set('rack.input', #{StringIO.new(`body`)});
+              } else {
+                env.set('rack.input', #@default_input);
+              }
               env.set('rack.logger', #@logger);
               env.set('rack.multipart.buffer_size', 4096);
               env.set('rack.multipart.tempfile_factory', #@t_factory);
