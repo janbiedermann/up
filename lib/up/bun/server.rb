@@ -89,7 +89,14 @@ module Up
               env.set('QUERY_STRING', "");
               env.set('REQUEST_METHOD', req.method);
               env.set('PATH_INFO', req.url);
-              req.headers.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
+              req.headers.forEach((k, v) => { 
+                let h = k.toUpperCase().replaceAll('-', '_');
+                if (h[0] === 'C' && (h === 'CONTENT_TYPE || h === 'CONTENT_LENGTH')) {
+                  env.set(h, v) ;
+                } else {
+                  env.set('HTTP_' + h, v) ;
+                }
+              });
               const rack_res = #@app.$call(env);
               if (upgrade) {
                 const handler = env.get('rack.upgrade');

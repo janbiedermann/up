@@ -72,7 +72,14 @@ module Up
           env.set('QUERY_STRING', req.getQuery() || '');
           env.set('REQUEST_METHOD', req.getMethod().toUpperCase());
           env.set('PATH_INFO', req.getUrl());
-          req.forEach((k, v) => { env.set('HTTP_' + k.toUpperCase().replaceAll('-', '_'), v) });
+          req.forEach((k, v) => {
+            let h = k.toUpperCase().replaceAll('-', '_');
+            if (h[0] === 'C' && (h === 'CONTENT_TYPE || h === 'CONTENT_LENGTH')) {
+              env.set(h, v) ;
+            } else {
+              env.set('HTTP_' + h, v) ;
+            }
+          });
           return env;
         }
       }

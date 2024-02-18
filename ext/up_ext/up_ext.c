@@ -143,9 +143,17 @@ static void up_internal_req_header_handler(const char *h, size_t h_len,
   }
 
   header_key[h_len + 5] = '\0';
-  rb_hash_aset((VALUE)renv,
-               rb_enc_str_new(header_key, h_len + 5, binary_encoding),
-               rb_enc_str_new(v, v_len, binary_encoding));
+  if (header_key[5] == 'C' &&
+      ((strncmp(header_key + 5, "CONTENT_TYPE", 12) == 0) ||
+       (strncmp(header_key + 5, "CONTENT_LENGTH", 14) == 0))) {
+    rb_hash_aset((VALUE)renv,
+                 rb_enc_str_new(header_key + 5, h_len, binary_encoding),
+                 rb_enc_str_new(v, v_len, binary_encoding));
+  } else {
+    rb_hash_aset((VALUE)renv,
+                 rb_enc_str_new(header_key, h_len + 5, binary_encoding),
+                 rb_enc_str_new(v, v_len, binary_encoding));
+  }
 }
 
 static void up_server_prepare_env(VALUE renv, uws_req_t *req) {
