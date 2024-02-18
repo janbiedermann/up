@@ -22,7 +22,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'logger', '~> 1.6.0'
   spec.add_dependency 'opal', '>= 1.8.2', '< 3.0.0'
   spec.add_dependency 'rack', '~> 3.0.9'
-  spec.add_dependency 'rackup', '>= 0.2.2', '< 3.0.0'
 
   spec.add_development_dependency 'rake', '~> 13.1.0'
   spec.add_development_dependency 'rake-compiler', '~> 1.2.7'
