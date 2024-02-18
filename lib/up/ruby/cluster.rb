@@ -12,6 +12,7 @@ module Up
         @secret = Random.uuid
         @workers = workers || Etc.nprocessors
         @members = []
+        @localhost_addr = TCPSocket.getaddress('localhost')
       end
 
       def listen
@@ -64,7 +65,7 @@ module Up
 
       def members_alive?
         @workers.times do |i|
-          TCPSocket.new('localhost', @port + i + 1).close
+          TCPSocket.new(@localhost_addr , @port + i + 1).close
         end
         true
       rescue Errno::ECONNREFUSED, Errno::EADDRNOTAVAIL
