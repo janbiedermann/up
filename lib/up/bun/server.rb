@@ -27,7 +27,6 @@ module Up
         @default_input = StringIO.new('', 'r')
         @server    = nil
         @logger    = logger
-        @t_factory = proc { |filename, _content_type| File.new(filename, 'a+') }
       end
 
       %x{
@@ -78,8 +77,6 @@ module Up
                 env.set('rack.input', #@default_input);
               }
               env.set('rack.logger', #@logger);
-              env.set('rack.multipart.buffer_size', 4096);
-              env.set('rack.multipart.tempfile_factory', #@t_factory);
               if (upgrade) {
                 env.set('rack.upgrade?', #{:websocket});
               }

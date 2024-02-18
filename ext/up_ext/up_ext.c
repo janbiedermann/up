@@ -921,15 +921,6 @@ void up_setup_rack_env_template(void) {
   // A common object interface for logging messages
   up_hash_set(rack_env_template, "rack.logger", default_logger);
 
-  // An Integer hint to the multipart parser as to what chunk size to use for
-  // reads and writes.
-  up_hash_set(rack_env_template, "rack.multipart.buffer_size", INT2FIX(4096));
-
-  // An object responding to #call with two arguments, the filename and
-  // content_type given for the multipart form field, and returning an IO-like
-  // object that responds to #<< and optionally #rewind.
-  // up_hash_set(rack_env_template, "rack.multipart.tempfile_factory", Qnil);
-
   // An array of callables run by the server after the response has been
   // processed.
   // up_hash_set(rack_env_template, "rack.response_finished", Qnil);

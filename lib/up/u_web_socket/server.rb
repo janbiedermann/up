@@ -33,7 +33,6 @@ module Up
         @default_input = StringIO.new('', 'r')
         @server    = nil
         @logger    = logger
-        @t_factory = proc { |filename, _content_type| File.new(filename, 'a+') }
       end
 
       %x{
@@ -64,8 +63,6 @@ module Up
           env.set('rack.errors',#{STDERR});
           env.set('rack.input', ins.default_input);
           env.set('rack.logger', ins.logger);
-          env.set('rack.multipart.buffer_size', 4096);
-          env.set('rack.multipart.tempfile_factory', ins.t_factory);
           env.set('rack.url_scheme', ins.scheme);
           env.set('SCRIPT_NAME', "");
           env.set('SERVER_PROTOCOL', 'HTTP/1.1');
