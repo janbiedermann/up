@@ -14,10 +14,10 @@ module Up
           puts self
           exit
         end
-        on('-p', '--port PORT', String, 'Port number the server will listen to') do |port|
+        on('-p', '--port PORT', String, 'Port number the server will listen to. Default: 3000') do |port|
           options[:port] = port.to_i
         end
-        on('-b', '--bind ADDRESS', String, 'Address the server will listen to') do |host|
+        on('-b', '--bind ADDRESS', String, 'Address the server will listen to. Default: localhost') do |host|
           options[:host] = host
         end
         on('-s', '--secure', "Use secure sockets.\nWhen using secure sockets, the -a, -c and -k options must be provided") do
@@ -32,12 +32,15 @@ module Up
         on('-k', '--key-file FILE', String, 'File with the servers certificate') do |key_file|
           options[:key_file] = key_file
         end
-        on('-l', '--log-file FILE', String, 'log file') do |log_file|
+        on('-l', '--log-file FILE', String, 'Log file') do |log_file|
           options[:logger] = Logger.new(File.new(log_file, 'a+'))
         end
         on('-v', '--version', 'Show version') do
           puts "Up! v#{Up::VERSION}"
           exit
+        end
+        on('-w', '--workers NUMBER', 'For clusters, the number of workers to run. Default: number of processors') do |workers|
+          options[:workers] = workers.to_i
         end
       end
 
