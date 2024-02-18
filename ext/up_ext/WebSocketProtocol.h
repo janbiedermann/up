@@ -18,7 +18,7 @@
 #ifndef UWS_WEBSOCKETPROTOCOL_H
 #define UWS_WEBSOCKETPROTOCOL_H
 
-#include <libusockets.h>
+#include "libusockets.h"
 
 #include <cstdint>
 #include <cstdlib>
