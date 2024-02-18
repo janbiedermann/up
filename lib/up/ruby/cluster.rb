@@ -1,6 +1,7 @@
 # backtick_javascript: true
 require 'etc'
 require 'random/formatter'
+require 'socket'
 require 'up_ext'
 
 module Up
@@ -38,8 +39,10 @@ module Up
 
       def install_signal_handlers
         Signal.trap('CHLD') do
-          warn "\nError: a cluster member died!"
-          kill_members
+          unless members_alive?
+            warn "\nError: a cluster worker died!"
+            kill_members
+          end
         end
         Signal.trap('INT') do
           warn "\nReceived CTRL-C!"
@@ -49,7 +52,7 @@ module Up
 
       def kill_members
         Signal.trap('CHLD', 'IGNORE')
-        STDERR.print "Stopping workers: "
+        STDERR.print "Stopping all workers: "
         @members.each do |mid|
           Process.kill('INT', mid) rescue nil
           STDERR.print '.'
@@ -57,6 +60,15 @@ module Up
         @members.clear
         warn "\nCluster stopped."
         Signal.trap('CHLD', 'DEFAULT')
+      end
+
+      def members_alive?
+        @workers.times do |i|
+          TCPSocket.new('localhost', @port + i + 1).close
+        end
+        true
+      rescue Errno::ECONNREFUSED, Errno::EADDRNOTAVAIL
+        false
       end
     end
   end

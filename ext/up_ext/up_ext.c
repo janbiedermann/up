@@ -26,6 +26,7 @@ static ID at_instance;
 static ID at_member_id;
 static ID at_members;
 static ID at_open;
+static ID at_port;
 static ID at_protocol;
 static ID at_secret;
 static ID at_server;
@@ -629,6 +630,8 @@ static VALUE up_server_init(int argc, VALUE *argv, VALUE self) {
   s->port = rport;
   s->logger = rargs[3];
 
+  rb_ivar_set(self, at_port, s->port);
+
   return self;
 }
 
@@ -969,6 +972,7 @@ void Init_up_ext(void) {
   at_member_id = rb_intern("@member_id");
   at_members = rb_intern("@members");
   at_open = rb_intern("@open");
+  at_port = rb_intern("@port");
   at_protocol = rb_intern("@protocol");
   at_secret = rb_intern("@secret");
   at_server = rb_intern("@server");
