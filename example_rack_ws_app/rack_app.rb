@@ -40,11 +40,23 @@ class RackApp
           i++;
           ws.send("Hello World, message number " + i);
         }
+        function post_message() {
+          fetch('http://' + window.location.host, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ "hello": "world" })
+          });
+        }
       </script>
       </head>
       <body>
       <div id="receiver">Please click the "Send" button</div>
       <button onclick="send_message()">Send</button>
+      <button onclick="post_message()">Post</button>
+      <div>#{env.to_s}<div>
       </body>
     )
     [200, {"Content-Type" => "text/html"}, [body]]
