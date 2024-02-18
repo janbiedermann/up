@@ -34,9 +34,9 @@ module Up
               #@members[i] = cluster.fork();
             }
           } else {
-            self.worker = true;
+            #@worker = true;
             function process_message_handler(message, handle) {
-              self.server.publish(message.c, message.m);
+              #@server.publish(message.c, message.m);
             }
             process.on('message', process_message_handler);
             #{super}
@@ -49,7 +49,7 @@ module Up
           if (!message.$$is_string) {
             message = JSON.stringify(message);
           }
-          if (self.worker) {
+          if (#@worker ) {
             #@server?.publish(channel, message);
             process.send({c: channel, m: message});
           } else if (#@members) {

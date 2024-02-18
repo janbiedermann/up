@@ -43,7 +43,7 @@ module Up
             message = JSON.stringify(message);
           }
           res = #@server?.publish(channel, message);
-          if (self.worker) {
+          if (#@worker) {
             process.send({c: channel, m: message});
           }
         }

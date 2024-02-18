@@ -146,9 +146,9 @@ module Up
                 client.open = false;
                 client.handler = handler
                 client.protocol = #{:websocket};
-                client.server = self.server;
+                client.server = #@server;
                 client.timeout = 120;
-                if (self.worker) {
+                if (#@worker) {
                   client.worker = true;
                 }
                 res.upgrade({ client: client },
@@ -177,7 +177,7 @@ module Up
           if (!message.$$is_string) {
             message = JSON.stringify(message);
           }
-          self.server.publish(channel, message);
+          #@server.publish(channel, message);
         }
       end
 

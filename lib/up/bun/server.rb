@@ -4,6 +4,13 @@ require 'up/cli'
 require 'up/client'
 
 module Up
+  class << self
+    def publish(channel, message)
+      raise 'no instance running' unless @instance
+      @instance&.publish(channel, message)
+    end
+  end
+
   module Bun
     class Server
       def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, logger: Logger.new(STDERR))
@@ -49,6 +56,7 @@ module Up
       }
       def listen
         raise "already running" if @server
+        ::Up.instance_variable_set(:@instance, self)
         %x{
           const oubs = Opal.Up.Bun.Server;
           const ouwc = Opal.Up.Client;
@@ -149,6 +157,15 @@ module Up
       
           #@server = Bun.serve(server_options);
           console.log(`Server is running on ${#@scheme}://${#@host}:${#@port}`);
+        }
+      end
+
+      def publish(channel, message)
+        %x{
+          if (!message.$$is_string) {
+            message = JSON.stringify(message);
+          }
+          #@server.publish(channel, message);
         }
       end
 
