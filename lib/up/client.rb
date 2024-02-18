@@ -36,15 +36,14 @@ module Up
         `#@ws?.getBufferedAmount()`
       end
 
-      def publish(channel, message, engine = nil)
+      def publish(channel, message)
         res = false
-        raise 'publish engine not supported' if engine
         %x{
           if (!message.$$is_string) {
             message = JSON.stringify(message);
           }
           res = #@server?.publish(channel, message);
-          if (engine !== false && self.worker) {
+          if (self.worker) {
             process.send({c: channel, m: message});
           }
         }

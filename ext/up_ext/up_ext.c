@@ -22,7 +22,9 @@ static VALUE cLogger;
 
 static ID at_env;
 static ID at_handler;
+static ID at_instance;
 static ID at_member_id;
+static ID at_members;
 static ID at_open;
 static ID at_protocol;
 static ID at_secret;
@@ -40,6 +42,7 @@ static ID id_on_drained;
 static ID id_on_message;
 static ID id_on_open;
 static ID id_port;
+static ID id_publish;
 
 static rb_encoding *utf8_encoding;
 static rb_encoding *binary_encoding;
@@ -411,14 +414,14 @@ static VALUE up_client_pending(VALUE self) {
   return INT2FIX(0);
 }
 
-static void up_client_cluster_publish(server_s *s, int st, VALUE channel,
+static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
                                       VALUE message) {
   const char *opening_line = "POST " INTERNAL_PUBLISH_PATH " HTTP/1.1\r\n";
   const char *host_header = "Host: localhost\r\n";
   const char *secret = "Secret: ";
   char secret_header[50];
   memcpy(secret_header, secret, 8);
-  memcpy(secret_header + 8, s->secret, 36);
+  memcpy(secret_header + 8, scrt, 36);
   memcpy(secret_header + 8 + 36, "\r\n", 2);
   const char *content_type = "Content-Type: text/plain\r\n";
   long c_length = RSTRING_LEN(channel) + RSTRING_LEN(message) + 2;
@@ -447,12 +450,25 @@ static void up_client_cluster_publish(server_s *s, int st, VALUE channel,
   // fprintf(stderr, "read: %s\n", read_buf);
 }
 
-static VALUE up_client_publish(int argc, VALUE *argv, VALUE self) {
+static void up_internal_publish_to_member(server_s *s, VALUE channel,
+                                          VALUE message, int member_idx) {
+  struct sockaddr_in member_addr = {.sin_addr.s_addr = inet_addr("127.0.0.1"),
+                                    .sin_family = AF_INET};
+  int st = socket(AF_INET, SOCK_STREAM, 0);
+  if (st) {
+    member_addr.sin_port = htons(FIX2INT(s->port) + member_idx);
+    if (connect(st, (struct sockaddr *)&member_addr,
+                sizeof(struct sockaddr_in)) == 0) {
+      up_client_cluster_publish(s->secret, st, channel, message);
+      close(st);
+    }
+  }
+}
+
+static VALUE up_client_publish(VALUE self, VALUE channel, VALUE message) {
   uws_websocket_t *ws = DATA_PTR(self);
   if (!ws)
     return Qnil;
-  VALUE channel, message, engine;
-  rb_scan_args(argc, argv, "21", &channel, &message, &engine);
   if (TYPE(channel) != T_STRING)
     channel = rb_obj_as_string(channel);
   if (TYPE(message) != T_STRING)
@@ -467,20 +483,9 @@ static VALUE up_client_publish(int argc, VALUE *argv, VALUE self) {
 
       // publish to cluster members
       int i;
-      struct sockaddr_in member_addr = {
-          .sin_addr.s_addr = inet_addr("127.0.0.1"), .sin_family = AF_INET};
       for (i = 1; i <= s->workers; i++) {
-        if (i != s->member_id) {
-          int st = socket(AF_INET, SOCK_STREAM, 0);
-          if (st) {
-            member_addr.sin_port = htons(FIX2INT(s->port) + i);
-            if (connect(st, (struct sockaddr *)&member_addr,
-                        sizeof(struct sockaddr_in)) == 0) {
-              up_client_cluster_publish(s, st, channel, message);
-              close(st);
-            }
-          }
-        }
+        if (i != s->member_id)
+          up_internal_publish_to_member(s, channel, message, i);
       }
     }
     return res ? Qtrue : Qfalse;
@@ -747,6 +752,7 @@ static void up_internal_close_sockets(int signal) {
 static VALUE up_server_listen(VALUE self) {
   server_s *s = DATA_PTR(self);
   up_internal_check_arg_types(s->rapp, &s->host, &s->port);
+  rb_ivar_set(mUp, at_instance, self);
 
   s->env_template = rb_hash_dup(rack_env_template);
   // When combined with SCRIPT_NAME and PATH_INFO, these variables can be used
@@ -820,6 +826,33 @@ static VALUE up_server_listen(VALUE self) {
   return self;
 }
 
+static VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
+  if (TYPE(channel) != T_STRING)
+    channel = rb_obj_as_string(channel);
+  if (TYPE(message) != T_STRING)
+    message = rb_obj_as_string(message);
+  server_s *s = DATA_PTR(self);
+  VALUE members = rb_ivar_get(self, at_members);
+  if (members != Qnil) {
+    long i, mb_cnt = RARRAY_LEN(members);
+    for (i = 0; i < mb_cnt; i++) {
+      up_internal_publish_to_member(s, channel, message, i);
+    }
+  } else {
+    uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel),
+                RSTRING_PTR(message), RSTRING_LEN(message), TEXT, false);
+    if (s->member_id > 0) {
+      // publish to cluster members
+      int i;
+      for (i = 1; i <= s->workers; i++) {
+        if (i != s->member_id)
+          up_internal_publish_to_member(s, channel, message, i);
+      }
+    }
+  }
+  return Qtrue;
+}
+
 static VALUE up_server_stop(VALUE self) {
   server_s *s = DATA_PTR(self);
   if (!s->app)
@@ -891,10 +924,19 @@ void up_setup_rack_env_template(void) {
   rb_hash_aset(rack_env_template, HTTP_VERSION, http11);
 }
 
+static VALUE up_publish(VALUE self, VALUE channel, VALUE message) {
+  VALUE instance = rb_ivar_get(mUp, at_instance);
+  if (instance != Qnil)
+    return rb_funcall(instance, id_publish, 2, channel, message);
+  return Qfalse;
+}
+
 void Init_up_ext(void) {
   at_env = rb_intern("@env");
   at_handler = rb_intern("@handler");
+  at_instance = rb_intern("@instance");
   at_member_id = rb_intern("@member_id");
+  at_members = rb_intern("@members");
   at_open = rb_intern("@open");
   at_protocol = rb_intern("@protocol");
   at_secret = rb_intern("@secret");
@@ -912,6 +954,7 @@ void Init_up_ext(void) {
   id_on_message = rb_intern("on_message");
   id_on_open = rb_intern("on_open");
   id_port = rb_intern("port");
+  id_publish = rb_intern("publish");
 
   utf8_encoding = rb_enc_find("UTF-8");
   binary_encoding = rb_enc_find("binary");
@@ -949,11 +992,13 @@ void Init_up_ext(void) {
   up_setup_rack_env_template();
 
   mUp = rb_define_module("Up");
+  rb_define_singleton_method(mUp, "publish", up_publish, 2);
+
   cClient = rb_define_class_under(mUp, "Client", rb_cObject);
   rb_define_alloc_func(cClient, up_client_alloc);
   rb_define_method(cClient, "close", up_client_close, 0);
   rb_define_method(cClient, "pending", up_client_pending, 0);
-  rb_define_method(cClient, "publish", up_client_publish, -1);
+  rb_define_method(cClient, "publish", up_client_publish, 2);
   rb_define_method(cClient, "subscribe", up_client_subscribe, -1);
   rb_define_method(cClient, "unsubscribe", up_client_unsubscribe, -1);
   rb_define_method(cClient, "write", up_client_write, 1);
@@ -964,5 +1009,6 @@ void Init_up_ext(void) {
   rb_define_alloc_func(cServer, up_server_alloc);
   rb_define_method(cServer, "initialize", up_server_init, -1);
   rb_define_method(cServer, "listen", up_server_listen, 0);
+  rb_define_method(cServer, "publish", up_server_publish, 2);
   rb_define_method(cServer, "stop", up_server_stop, 0);
 }

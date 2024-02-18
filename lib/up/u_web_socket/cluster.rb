@@ -18,6 +18,7 @@ module Up
 
       def listen
         raise "already running" unless @members.empty?
+        ::Up.instance_variable_set(:@instance, self)
         %x{
           if (cluster.isPrimary) {
             cluster.on('message', (worker, message, handle) => {
@@ -41,6 +42,25 @@ module Up
             #{super}
           }
         }
+      end
+
+      def publish(channel, message)
+        %x{
+          if (!message.$$is_string) {
+            message = JSON.stringify(message);
+          }
+          if (self.worker) {
+            #@server?.publish(channel, message);
+            process.send({c: channel, m: message});
+          } else if (#@members) {
+            for (let member of #@members) {
+              if (member !== worker) {
+                member.send(message);
+              }
+            }
+          }
+        }
+        true
       end
 
       def stop

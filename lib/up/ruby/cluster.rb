@@ -15,6 +15,7 @@ module Up
 
       def listen
         raise "already running" unless @members.empty?
+        ::Up.instance_variable_set(:@instance, self)
         @workers.times do
           @members << fork do
             @member_id = @members.size + 1
