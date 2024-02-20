@@ -1,6 +1,7 @@
 #include "libusockets.h"
 #include "libuwebsockets.h"
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <signal.h>
@@ -12,6 +13,12 @@
 #define MAX_HEADER_KEY_BUF 256
 #define MAX_HEADER_KEY_LEN 255
 #define INTERNAL_PUBLISH_PATH "/__up__cluster__publish__"
+
+#undef close
+
+#ifndef MSG_MORE
+#define MSG_MORE 0
+#endif
 
 static VALUE mUp;
 static VALUE mRuby;
@@ -126,8 +133,8 @@ typedef struct server_s {
   VALUE env_template;
   VALUE body;
   VALUE env;
-  int workers;
-  int member_id;
+  long workers;
+  long member_id;
   char secret[37];
 } server_s;
 
@@ -210,9 +217,9 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
       return ST_CONTINUE;
   }
   char *key_s = RSTRING_PTR(key);
-  int key_len = RSTRING_LEN(key);
+  long key_len = RSTRING_LEN(key);
   char *data_s = RSTRING_PTR(data);
-  int data_len = RSTRING_LEN(data);
+  long data_len = RSTRING_LEN(data);
 
   if (key_len > MAX_HEADER_KEY_LEN)
     key_len = MAX_HEADER_KEY_LEN;
@@ -479,8 +486,7 @@ static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
        MSG_DONTROUTE | MSG_MORE);
   send(st, boundary_disposition, strlen(boundary_disposition),
        MSG_DONTROUTE | MSG_MORE);
-  send(st, RSTRING_PTR(message), RSTRING_LEN(message),
-       MSG_DONTROUTE | MSG_MORE);
+  send(st, RSTRING_PTR(message), RSTRING_LEN(message), MSG_DONTROUTE);
 
   // char read_buf[256];
   // if (read(st, read_buf, 256)) {
@@ -490,7 +496,7 @@ static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
 }
 
 static void up_internal_publish_to_member(server_s *s, VALUE channel,
-                                          VALUE message, int member_idx) {
+                                          VALUE message, long member_idx) {
   struct sockaddr_in member_addr = {.sin_addr.s_addr = inet_addr("127.0.0.1"),
                                     .sin_family = AF_INET};
   int st = socket(AF_INET, SOCK_STREAM, 0);
@@ -521,7 +527,7 @@ static VALUE up_client_publish(VALUE self, VALUE channel, VALUE message) {
     if (s->member_id > 0) {
 
       // publish to cluster members
-      int i;
+      long i;
       for (i = 1; i <= s->workers; i++) {
         if (i != s->member_id)
           up_internal_publish_to_member(s, channel, message, i);
@@ -672,7 +678,7 @@ static void up_ws_close_handler(uws_websocket_t *ws, int code,
   VALUE rhandler = rb_ivar_get(*client, at_handler);
   if (rb_respond_to(rhandler, id_on_close))
     rb_funcall(rhandler, id_on_close, 1, *client);
-  // rb_gc_unregister_address(client);
+  rb_gc_unregister_address(client);
   DATA_PTR(*client) = NULL;
   free(client);
 }
@@ -729,7 +735,7 @@ static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
     // upgrade
 
     VALUE *client = malloc(sizeof(VALUE));
-    // rb_gc_register_address(client);
+    rb_gc_register_address(client);
     *client = rb_class_new_instance(0, NULL, cClient);
     rb_ivar_set(*client, at_env, renv);
     rb_ivar_set(*client, at_open, false);
@@ -836,8 +842,10 @@ static VALUE up_server_listen(VALUE self) {
     s->secret[36] = '\0';
     uws_app_any(USE_SSL, s->app, INTERNAL_PUBLISH_PATH,
                 up_internal_publish_handler, (void *)s);
-    uws_app_listen_config_t config_internal = {
-        .port = config.port + s->member_id, .host = "localhost", .options = 0};
+    uws_app_listen_config_t config_internal = {.port = config.port +
+                                                       (int)s->member_id,
+                                               .host = "localhost",
+                                               .options = 0};
     uws_app_listen_with_config(false, s->app, config_internal,
                                up_server_cluster_listen_handler, NULL);
   } else {
@@ -885,7 +893,7 @@ static VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
                 RSTRING_PTR(message), RSTRING_LEN(message), TEXT, false);
     if (s->member_id > 0) {
       // publish to cluster members
-      int i;
+      long i;
       for (i = 1; i <= s->workers; i++) {
         if (i != s->member_id)
           up_internal_publish_to_member(s, channel, message, i);
