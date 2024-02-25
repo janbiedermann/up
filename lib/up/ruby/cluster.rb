@@ -7,8 +7,12 @@ require 'up_ext'
 module Up
   module Ruby
     class Cluster < Up::Ruby::Server
-      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, logger: Logger.new(STDERR), workers: nil)
+      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http',
+                     ca_file: nil, cert_file: nil, key_file: nil,
+                     pid_file: nil,
+                     logger: Logger.new(STDERR), workers: nil)
         super(app: app, host: host, port: port)
+        @pid_file = pid_file
         @secret = Random.uuid
         @workers = workers || Etc.nprocessors
         @members = []
@@ -24,6 +28,8 @@ module Up
             super
           end
         end
+        File.write(@pid_file, Process.pid.to_s) if @pid_file
+        puts "Server PID: #{Process.pid}"
         unless @member_id
           install_signal_handlers
           Process.waitall
@@ -33,6 +39,7 @@ module Up
       def stop
         if Up::CLI::stoppable?
           kill_members
+          super
         end
       end
 
@@ -47,6 +54,10 @@ module Up
         end
         Signal.trap('INT') do
           warn "\nReceived CTRL-C!"
+          kill_members
+        end
+        Signal.trap('TERM') do
+          warn "\nReceived TERM signal!"
           kill_members
         end
       end

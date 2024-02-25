@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 if RUBY_ENGINE == 'opal'
-  require 'up/u_web_socket/server_cli'
+  require 'up/u_web_socket/cluster_cli'
   Up::CLI.call
 else
   require 'up/cli'

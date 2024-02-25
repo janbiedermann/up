@@ -1,4 +1,0 @@
-#!/usr/bin/env ruby
-require 'up/cli'
-require 'up/ruby/cluster_cli'
-Up::CLI.call

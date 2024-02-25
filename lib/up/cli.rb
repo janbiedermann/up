@@ -35,6 +35,9 @@ module Up
         on('-l', '--log-file FILE', String, 'Log file') do |log_file|
           options[:logger] = Logger.new(File.new(log_file, 'a+'))
         end
+        on('-p', '--pid-file FILE', String, 'PID file') do |pid_file|
+          options[:pid_file] = pid_file
+        end
         on('-v', '--version', 'Show version') do
           puts "Up! v#{Up::VERSION}"
           exit

@@ -1,4 +1,5 @@
 require 'opal/platform'
+require 'nodejs'
 require 'nodejs/file'
 require 'nodejs/require'
 require 'opal-parser'

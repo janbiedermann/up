@@ -74,7 +74,7 @@ module Up
           env.set('PATH_INFO', req.getUrl());
           req.forEach((k, v) => {
             let h = k.toUpperCase().replaceAll('-', '_');
-            if (h[0] === 'C' && (h === 'CONTENT_TYPE || h === 'CONTENT_LENGTH')) {
+            if (h[0] === 'C' && (h === 'CONTENT_TYPE' || h === 'CONTENT_LENGTH')) {
               env.set(h, v) ;
             } else {
               env.set('HTTP_' + h, v) ;

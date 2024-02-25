@@ -14,7 +14,10 @@ module Up
 
   module Bun
     class Server
-      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, logger: Logger.new(STDERR))
+      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http',
+                     ca_file: nil, cert_file: nil, key_file: nil,
+                     pid_file: nil,
+                     logger: Logger.new(STDERR))
         @app = app
         @scheme    = scheme || 'http'
         raise "unsupported scheme #{@scheme}" unless %w[http https].include?(@scheme)
@@ -24,6 +27,7 @@ module Up
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
+        @pid_file  = pid_file
         @default_input = StringIO.new('', 'r')
         @server    = nil
         @logger    = logger
@@ -54,9 +58,12 @@ module Up
           return body;
         }
       }
+
       def listen
         raise "already running" if @server
         ::Up.instance_variable_set(:@instance, self)
+        File.write(@pid_file, `process.pid.toString()`) if @pid_file
+        puts "Server PID: #{`process.pid`}"
         %x{
           const oubs = Opal.Up.Bun.Server;
           const ouwc = Opal.Up.Client;

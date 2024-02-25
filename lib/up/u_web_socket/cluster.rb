@@ -4,15 +4,20 @@ require 'up/u_web_socket/server'
 %x{
   const process = require('node:process');
   const cluster = require('node:cluster');
+  const filesys = require('node:fs') ;
   const num_workers = require('node:os').availableParallelism();
 }
 
 module Up
   module UWebSocket
     class Cluster < Up::UWebSocket::Server
-      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, logger: Logger.new(STDERR), workers: nil)
+      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http',
+                     ca_file: nil, cert_file: nil, key_file: nil,
+                     pid_file: nil,
+                     logger: Logger.new(STDERR), workers: nil)
         super(app: app, host: host, port: port, scheme: scheme, ca_file: ca_file, cert_file: cert_file, key_file: key_file, logger: logger)
         @workers = workers || `num_workers`
+        @pid_file = pid_file
         @members = []
       end
 
@@ -21,6 +26,10 @@ module Up
         ::Up.instance_variable_set(:@instance, self)
         %x{
           if (cluster.isPrimary) {
+            #{
+              File.write(@pid_file, `process.pid.toString()`) if @pid_file
+              puts "Server PID: #{`process.pid`}"
+            }
             cluster.on('message', (worker, message, handle) => {
               if (message.c && message.m) {
                 for (let member of #@members) {
