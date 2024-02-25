@@ -17,8 +17,6 @@ Racer:            14536.88 req/s   8.94 ms        15354.14 req/s   8.44 ms
 Agoo:             49078.57 req/s   2.54 ms        89022.91 req/s   1.51 ms
 Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
 Up! bun:           3900.44 req/s  32.00 ms        47334.16 req/s   2.64 ms
-Up! ruby:         22144.33 req/s   5.64 ms        58704.09 req/s   2.14 ms
-Up! uWS:           6540.62 req/s  19.09 ms        78384.93 req/s   1.59 ms
 Up! ruby cluster: 53641.29 req/s   2.35 ms       128237.52 req/s   0.97 ms
 Up! uWS cluster:  20143.62 req/s   6.20 ms       152353.97 req/s   0.82 ms <<<
 
@@ -34,11 +32,8 @@ Racer 0.1.3, defaults
 Unicorn 6.1.0, 4 workers
 Agoo 2.15.8, 4 workers, 4 threads
 Iodine 0.7.57, 4 workers, 1 thread
-Up! uWS 0.0.4, 1 worker
-Up! Node 0.0.4, 1 worker
-Up! Ruby 0.0.4, 1 worker
+Up! bun 0.0.4, 1 worker
 Up! uWS cluster 0.0.4, 4 workers
-Up! Node cluster 0.0.4, 4 workers
 Up! Ruby cluster 0.0.4, 4 workers
 
 running the example_rack_app from this repo, benchmarked with:
@@ -74,11 +69,9 @@ For a Gemfile available from rubygems:
 
 Available with `bundle exec` within the example apps or if this gem is included in your Gemfile:
 
-- `up` - starts a single worker server using Opal with uWebSockets
-- `up_cluster` - starts a cluster of workers using Opal with uWebSockets, fastest server
+- `up` - starts a cluster of workers using Opal with uWebSockets, fastest server
 - `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
-- `up_ruby` - starts a single worker using Ruby with uWebSockets in a native extension, does not support the --secure option/TLS
-- `up_ruby_cluster` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
+- `up_ruby` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
 
 ```
 Usage: up [options]
@@ -92,6 +85,7 @@ When using secure sockets, the -a, -c and -k options must be provided
     -c, --cert-file FILE             File with the servers certificate
     -k, --key-file FILE              File with the servers certificate
     -l, --log-file FILE              Log file
+    -p, --pid-file FILE              PID file
     -v, --version                    Show version
     -w, --workers NUMBER             For clusters, the number of workers to run. Default: number of processors
 ```
