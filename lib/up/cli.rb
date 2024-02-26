@@ -87,7 +87,7 @@ module Up
           end
           npm_cmd.chop! if npm_cmd.end_with?("\n")
           have_uws = `npm list|grep uWebSockets.js@20`
-          `npm i uNetworking/uWebSockets.js#v20.41.0` if have_uws.empty?
+          `npm i uNetworking/uWebSockets.js#v20.42.0` if have_uws.empty?
           true
         end
       end
