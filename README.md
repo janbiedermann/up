@@ -85,7 +85,7 @@ When using secure sockets, the -a, -c and -k options must be provided
     -c, --cert-file FILE             File with the servers certificate
     -k, --key-file FILE              File with the servers certificate
     -l, --log-file FILE              Log file
-    -p, --pid-file FILE              PID file
+    -P, --pid-file FILE              PID file
     -v, --version                    Show version
     -w, --workers NUMBER             For clusters, the number of workers to run. Default: number of processors
 ```
