@@ -26,11 +26,12 @@ module Up
           @members << fork do
             @member_id = @members.size + 1
             super
+            exit
           end
         end
-        File.write(@pid_file, Process.pid.to_s) if @pid_file
-        puts "Server PID: #{Process.pid}"
         unless @member_id
+          File.write(@pid_file, Process.pid.to_s) if @pid_file
+          puts "Server PID: #{Process.pid}"
           install_signal_handlers
           Process.waitall
         end
