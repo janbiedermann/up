@@ -70,9 +70,9 @@ module Up
           Process.kill('INT', mid) rescue nil
           STDERR.print '.'
         end
+        Signal.trap('CHLD', 'DEFAULT')
         @members.clear
         warn "\nCluster stopped."
-        Signal.trap('CHLD', 'DEFAULT')
       end
 
       def members_alive?
