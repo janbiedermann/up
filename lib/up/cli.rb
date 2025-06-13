@@ -60,15 +60,6 @@ module Up
 
     class << self
       if RUBY_ENGINE != 'opal'
-        def setup_bun
-          bun_cmd = `which bun`
-          if !bun_cmd || bun_cmd.empty?
-            puts "Please install bun first!"
-            exit 2
-          end
-          true
-        end
-          
         def setup_node
           node_cmd = `which node`
           if !node_cmd || node_cmd.empty?
@@ -78,16 +69,27 @@ module Up
           true
         end
 
-        def setup_u_web_socket
+        def setup_npm
           setup_node
           npm_cmd = `which npm`
           if !npm_cmd || npm_cmd.empty?
             puts "Please install npm first!"
             exit 2
           end
-          npm_cmd.chop! if npm_cmd.end_with?("\n")
+          true
+        end
+
+        def setup_u_web_socket
+          setup_npm
           have_uws = `npm list|grep uWebSockets.js@20`
-          `npm i uNetworking/uWebSockets.js#v20.42.0` if have_uws.empty?
+          `npm i uNetworking/uWebSockets.js#v20.52.0` if have_uws.empty?
+          true
+        end
+
+        def setup_esbuild
+          setup_npm
+          have_esbuild = `npm list|grep esbuild`
+          `npm i esbuild` if have_esbuild.empty?
           true
         end
       end
@@ -109,7 +111,9 @@ module Up
           lines = File.readlines('Gemfile')
           lines.each do |line|
             m = /gem ['"](\w+)['"]/.match(line)
-            gems << " -g #{m[1]} -r #{m[1]}" if m && m[1] != 'opal-up'
+            if m && m[1] != 'opal-up' && m[1] != 'opal'
+              gems << " -g #{m[1]} -r #{m[1]}" 
+            end
           end
         end
         gems
