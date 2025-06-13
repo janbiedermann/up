@@ -104,7 +104,7 @@ struct mmsghdr {
 
     return LIBUS_UDP_MAX_NUM; // one message
 #else
-    return sendmmsg(fd, (struct mmsghdr *)msgvec, vlen, flags | MSG_NOSIGNAL);
+    return (int)sendmmsg(fd, (struct mmsghdr *)msgvec, vlen, flags | MSG_NOSIGNAL);
 #endif
 }
 
@@ -127,11 +127,11 @@ int bsd_recvmmsg(LIBUS_SOCKET_DESCRIPTOR fd, void *msgvec, unsigned int vlen, in
     return LIBUS_UDP_MAX_NUM;
 #else
     // we need to set controllen for ip packet
-    for (int i = 0; i < vlen; i++) {
+    for (unsigned int i = 0; i < vlen; i++) {
         ((struct mmsghdr *)msgvec)[i].msg_hdr.msg_controllen = 256;
     }
 
-    return recvmmsg(fd, (struct mmsghdr *)msgvec, vlen, flags, 0);
+    return (int)recvmmsg(fd, (struct mmsghdr *)msgvec, vlen, flags, 0);
 #endif
 }
 
@@ -196,7 +196,7 @@ int bsd_udp_packet_buffer_payload_length(void *msgvec, int index) {
     struct us_internal_udp_packet_buffer *packet_buffer = (struct us_internal_udp_packet_buffer *) msgvec;
     return packet_buffer->len[index];
 #else
-    return ((struct mmsghdr *) msgvec)[index].msg_len;
+    return (int)(((struct mmsghdr *) msgvec)[index].msg_len);
 #endif
 }
 
@@ -404,7 +404,7 @@ LIBUS_SOCKET_DESCRIPTOR bsd_accept_socket(LIBUS_SOCKET_DESCRIPTOR fd, struct bsd
 }
 
 int bsd_recv(LIBUS_SOCKET_DESCRIPTOR fd, void *buf, int length, int flags) {
-    return recv(fd, buf, length, flags);
+    return (int)recv(fd, buf, length, flags);
 }
 
 #if !defined(_WIN32)
@@ -418,7 +418,7 @@ int bsd_write2(LIBUS_SOCKET_DESCRIPTOR fd, const char *header, int header_length
     chunks[1].iov_base = (char *)payload;
     chunks[1].iov_len = payload_length;
     
-    return writev(fd, chunks, 2);
+    return (int)writev(fd, chunks, 2);
 }
 #else
 int bsd_write2(LIBUS_SOCKET_DESCRIPTOR fd, const char *header, int header_length, const char *payload, int payload_length) {
@@ -450,7 +450,7 @@ int bsd_send(LIBUS_SOCKET_DESCRIPTOR fd, const char *buf, int length, int msg_mo
 
     // use TCP_NOPUSH
 
-    return send(fd, buf, length, MSG_NOSIGNAL);
+    return (int)send(fd, buf, length, MSG_NOSIGNAL);
 
 #endif
 }
@@ -568,7 +568,7 @@ LIBUS_SOCKET_DESCRIPTOR bsd_create_listen_socket_unix(const char *path, int opti
     memset(&server_address, 0, sizeof(server_address));
     server_address.sun_family = AF_UNIX;
     strcpy(server_address.sun_path, path);
-    int size = offsetof(struct sockaddr_un, sun_path) + strlen(server_address.sun_path);
+    socklen_t size = (socklen_t)(offsetof(struct sockaddr_un, sun_path) + strlen(server_address.sun_path));
 #ifdef _WIN32
     _unlink(path);
 #else
@@ -753,7 +753,7 @@ LIBUS_SOCKET_DESCRIPTOR bsd_create_connect_socket_unix(const char *server_path, 
     memset(&server_address, 0, sizeof(server_address));
     server_address.sun_family = AF_UNIX;
     strcpy(server_address.sun_path, server_path);
-    int size = offsetof(struct sockaddr_un, sun_path) + strlen(server_address.sun_path);
+    socklen_t size = (socklen_t)(offsetof(struct sockaddr_un, sun_path) + strlen(server_address.sun_path));
 
     LIBUS_SOCKET_DESCRIPTOR fd = bsd_create_socket(AF_UNIX, SOCK_STREAM, 0);
 

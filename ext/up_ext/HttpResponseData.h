@@ -20,80 +20,76 @@
 
 /* This data belongs to the HttpResponse */
 
-#include "AsyncSocketData.h"
 #include "HttpParser.h"
+#include "AsyncSocketData.h"
 #include "ProxyParser.h"
 
 #include "MoveOnlyFunction.h"
 
 namespace uWS {
 
-template <bool SSL> struct HttpResponseData : AsyncSocketData<SSL>, HttpParser {
-  template <bool> friend struct HttpResponse;
-  template <bool> friend struct HttpContext;
+template <bool SSL>
+struct HttpResponseData : AsyncSocketData<SSL>, HttpParser {
+    template <bool> friend struct HttpResponse;
+    template <bool> friend struct HttpContext;
 
-  /* When we are done with a response we mark it like so */
-  void markDone() {
-    onAborted = nullptr;
-    /* Also remove onWritable so that we do not emit when draining behind the
-     * scenes. */
-    onWritable = nullptr;
+    /* When we are done with a response we mark it like so */
+    void markDone() {
+        onAborted = nullptr;
+        /* Also remove onWritable so that we do not emit when draining behind the scenes. */
+        onWritable = nullptr;
 
-    /* We are done with this request */
-    state &= ~HttpResponseData<SSL>::HTTP_RESPONSE_PENDING;
-  }
-
-  /* Caller of onWritable. It is possible onWritable calls markDone so we need
-   * to borrow it. */
-  bool callOnWritable(uintmax_t offset) {
-    /* Borrow real onWritable */
-    MoveOnlyFunction<bool(uintmax_t)> borrowedOnWritable =
-        std::move(onWritable);
-
-    /* Set onWritable to placeholder */
-    onWritable = [](uintmax_t) { return true; };
-
-    /* Run borrowed onWritable */
-    bool ret = borrowedOnWritable(offset);
-
-    /* If we still have onWritable (the placeholder) then move back the real one
-     */
-    if (onWritable) {
-      /* We haven't reset onWritable, so give it back */
-      onWritable = std::move(borrowedOnWritable);
+        /* We are done with this request */
+        state &= ~HttpResponseData<SSL>::HTTP_RESPONSE_PENDING;
     }
 
-    return ret;
-  }
+    /* Caller of onWritable. It is possible onWritable calls markDone so we need to borrow it. */
+    bool callOnWritable(uintmax_t offset) {
+        /* Borrow real onWritable */
+        MoveOnlyFunction<bool(uintmax_t)> borrowedOnWritable = std::move(onWritable);
 
+        /* Set onWritable to placeholder */
+        onWritable = [](uintmax_t) {return true;};
+
+        /* Run borrowed onWritable */
+        bool ret = borrowedOnWritable(offset);
+
+        /* If we still have onWritable (the placeholder) then move back the real one */
+        if (onWritable) {
+            /* We haven't reset onWritable, so give it back */
+            onWritable = std::move(borrowedOnWritable);
+        }
+
+        return ret;
+    }
 private:
-  /* Bits of status */
-  enum {
-    HTTP_STATUS_CALLED = 1,    // used
-    HTTP_WRITE_CALLED = 2,     // used
-    HTTP_END_CALLED = 4,       // used
-    HTTP_RESPONSE_PENDING = 8, // used
-    HTTP_CONNECTION_CLOSE = 16 // used
-  };
+    /* Bits of status */
+    enum {
+        HTTP_STATUS_CALLED = 1, // used
+        HTTP_WRITE_CALLED = 2, // used
+        HTTP_END_CALLED = 4, // used
+        HTTP_RESPONSE_PENDING = 8, // used
+        HTTP_CONNECTION_CLOSE = 16 // used
+    };
 
-  /* Per socket event handlers */
-  MoveOnlyFunction<bool(uintmax_t)> onWritable;
-  MoveOnlyFunction<void()> onAborted;
-  MoveOnlyFunction<void(std::string_view, bool)> inStream; // onData
-  /* Outgoing offset */
-  uintmax_t offset = 0;
+    /* Per socket event handlers */
+    MoveOnlyFunction<bool(uintmax_t)> onWritable;
+    MoveOnlyFunction<void()> onAborted;
+    MoveOnlyFunction<void(std::string_view, bool)> inStream; // onData
+    /* Outgoing offset */
+    uintmax_t offset = 0;
 
-  /* Let's track number of bytes since last timeout reset in data handler */
-  unsigned int received_bytes_per_timeout = 0;
+    /* Let's track number of bytes since last timeout reset in data handler */
+    unsigned int received_bytes_per_timeout = 0;
 
-  /* Current state (content-length sent, status sent, write called, etc */
-  int state = 0;
+    /* Current state (content-length sent, status sent, write called, etc */
+    int state = 0;
 
 #ifdef UWS_WITH_PROXY
-  ProxyParser proxyParser;
+    ProxyParser proxyParser;
 #endif
 };
 
-} // namespace uWS
+}
 
 #endif // UWS_HTTPRESPONSEDATA_H

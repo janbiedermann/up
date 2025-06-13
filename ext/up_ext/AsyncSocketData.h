@@ -1,5 +1,5 @@
 /*
- * Authored by Alex Hultman, 2018-2021.
+ * Authored by Alex Hultman, 2018-2025.
  * Intellectual property of third-party.
 
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,49 +23,66 @@
 namespace uWS {
 
 struct BackPressure {
-  std::string buffer;
-  unsigned int pendingRemoval = 0;
-  BackPressure(BackPressure &&other) {
-    buffer = std::move(other.buffer);
-    pendingRemoval = other.pendingRemoval;
-  }
-  BackPressure() = default;
-  void append(const char *data, size_t length) { buffer.append(data, length); }
-  void erase(unsigned int length) {
-    pendingRemoval += length;
-    /* Always erase a minimum of 1/32th the current backpressure */
-    if (pendingRemoval > (buffer.length() >> 5)) {
-      buffer.erase(0, pendingRemoval);
-      pendingRemoval = 0;
+    std::string buffer;
+    unsigned int pendingRemoval = 0;
+    BackPressure(BackPressure &&other) {
+        buffer = std::move(other.buffer);
+        pendingRemoval = other.pendingRemoval;
     }
-  }
-  size_t length() { return buffer.length() - pendingRemoval; }
-  void clear() {
-    pendingRemoval = 0;
-    buffer.clear();
-  }
-  void reserve(size_t length) { buffer.reserve(length + pendingRemoval); }
-  void resize(size_t length) { buffer.resize(length + pendingRemoval); }
-  const char *data() { return buffer.data() + pendingRemoval; }
-  size_t size() { return length(); }
-  /* The total length, incuding pending removal */
-  size_t totalLength() { return buffer.length(); }
+    BackPressure() = default;
+    void append(const char *data, size_t length) {
+        buffer.append(data, length);
+    }
+    void erase(unsigned int length) {
+        pendingRemoval += length;
+        /* Always erase a minimum of 1/32th the current backpressure */
+        if (pendingRemoval > (buffer.length() >> 5)) {
+            std::string(buffer.begin() + pendingRemoval, buffer.end()).swap(buffer);
+            pendingRemoval = 0;
+        }
+    }
+    size_t length() {
+        return buffer.length() - pendingRemoval;
+    }
+    /* Only used in AsyncSocket::write - what about replacing it with the other functions like erase(length())? */
+    void clear() {
+        pendingRemoval = 0;
+        buffer.clear();
+        buffer.shrink_to_fit();
+    }
+    /* Only used by AsyncSocket::write (optionally) before append */
+    void reserve(size_t length) {
+        buffer.reserve(length + pendingRemoval);
+    }
+    /* Only used by getSendBuffer as last resort */
+    void resize(size_t length) {
+        buffer.resize(length + pendingRemoval);
+    }
+    const char *data() {
+        return buffer.data() + pendingRemoval;
+    }
+    /* The total length, incuding pending removal */
+    size_t totalLength() {
+        return buffer.length();
+    }
 };
 
 /* Depending on how we want AsyncSocket to function, this will need to change */
 
-template <bool SSL> struct AsyncSocketData {
-  /* This will do for now */
-  BackPressure buffer;
+template <bool SSL>
+struct AsyncSocketData {
+    /* This will do for now */
+    BackPressure buffer;
 
-  /* Allow move constructing us */
-  AsyncSocketData(BackPressure &&backpressure)
-      : buffer(std::move(backpressure)) {}
+    /* Allow move constructing us */
+    AsyncSocketData(BackPressure &&backpressure) : buffer(std::move(backpressure)) {
 
-  /* Or emppty */
-  AsyncSocketData() = default;
+    }
+
+    /* Or emppty */
+    AsyncSocketData() = default;
 };
 
-} // namespace uWS
+}
 
 #endif // UWS_ASYNCSOCKETDATA_H
