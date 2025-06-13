@@ -19,11 +19,12 @@ Gem::Specification.new do |spec|
   spec.extensions    = %w[ext/up_ext/extconf.rb]
   spec.required_ruby_version = '>= 3.0.0'
 
+  spec.add_dependency 'base64'
   spec.add_dependency 'logger', '~> 1.6.0'
   spec.add_dependency 'opal', '>= 1.8.2', '< 3.0.0'
   spec.add_dependency 'rack', '~> 3.0.9'
 
-  spec.add_development_dependency 'rake', '~> 13.1.0'
+  spec.add_development_dependency 'rake', '~> 13.3.0'
   spec.add_development_dependency 'rake-compiler', '~> 1.2.7'
   spec.add_development_dependency 'rspec', '~> 3.12.0'
 end
