@@ -277,7 +277,7 @@ void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int events)
                     do {
                         struct us_socket_context_t *context = us_socket_context(0, &listen_socket->s);
                         /* See if we want to export the FD or keep it here (this event can be unset) */
-                        if (context->on_pre_open == 0 || context->on_pre_open(client_fd) == client_fd) {
+                        if (context->on_pre_open == 0 || context->on_pre_open(context, client_fd) == client_fd) {
 
                             /* Adopt the newly accepted socket */
                             us_adopt_accepted_socket(0, context,
@@ -351,9 +351,19 @@ void us_internal_dispatch_ready_poll(struct us_poll_t *p, int error, int events)
                     }
                 }
 
-                int length = bsd_recv(us_poll_fd(&s->p), s->context->loop->data.recv_buf + LIBUS_RECV_BUFFER_PADDING, LIBUS_RECV_BUFFER_LENGTH, 0);
+                int length;
+                read_more:
+                length = bsd_recv(us_poll_fd(&s->p), s->context->loop->data.recv_buf + LIBUS_RECV_BUFFER_PADDING, LIBUS_RECV_BUFFER_LENGTH, 0);
                 if (length > 0) {
                     s = s->context->on_data(s, s->context->loop->data.recv_buf + LIBUS_RECV_BUFFER_PADDING, length);
+
+                    /* If we filled the entire recv buffer, we need to immediately read again since otherwise a
+                     * pending hangup event in the same even loop iteration can close the socket before we get
+                     * the chance to read again next iteration */
+                    if (length == LIBUS_RECV_BUFFER_LENGTH && s && !us_socket_is_closed(0, s)) {
+                        goto read_more;
+                    }
+
                 } else if (!length) {
                     if (us_socket_is_shut_down(0, s)) {
                         /* We got FIN back after sending it */
