@@ -8,39 +8,36 @@ A high performance Rack server for [Opal Ruby](https://opalrb.com/) and [Matz Ru
 ## Let Numbers speak first
 
 ```
-Response type:               env.to_s                    "hello_world"
-                 Requests/Second   Latency       Requests/Second   Latency
-Puma:              8884.53 req/s  15.18 ms        50822.38 req/s   2.62 ms
-Unicorn:          12302.35 req/s  10.22 ms        16329.68 req/s   7.68 ms
-Falcon:           13168.82 req/s   9.49 ms        24041.63 req/s   5.26 ms
-Racer:            14536.88 req/s   8.94 ms        15354.14 req/s   8.44 ms
-Agoo:             49078.57 req/s   2.54 ms        89022.91 req/s   1.51 ms
-Iodine:           59116.53 req/s   2.11 ms <<<   134267.79 req/s   0.93 ms
-Up! bun:           3900.44 req/s  32.00 ms        47334.16 req/s   2.64 ms
-Up! ruby cluster: 53641.29 req/s   2.35 ms       128237.52 req/s   0.97 ms
-Up! uWS cluster:  20143.62 req/s   6.20 ms       152353.97 req/s   0.82 ms <<<
+| Response type | env.to_s     | env.to_s   | "hello_world" | "hello_world" |
+|---------------|--------------|------------|---------------|---------------|
+|               | requests/sec | latency ms | requests/sec  | latency ms    |
+| Falcon        |     29535.66 |       4.23 |      44113.87 |          2.83 |
+| Iodine        | +2+ 77110.50 |       1.62 |     237500.78 |          0.52 |
+| Itsi          |     75048.06 |       1.66 |     109468.34 |          1.14 |
+| Puma          |     11422.91 |      10.93 |      40417.73 |          3.09 |
+| Up! ruby      | +1+ 79415.88 |       1.57 | +1+ 285264.62 |          0.44 |
+| Up! node      |     21186.08 |       5.90 |      78737.33 |          1.59 |
+| Up! uWS       |     29549.18 |       4.23 | +2+ 246984.65 |          0.50 |
 
-<<< denotes the fastest for the response type
++1+ denotes the fastest for the response type
++2+ denotes the second fastest for the response type
 
 running on/with:
-Linux, Kernel 6.5.0-x
-ruby 3.3.0, YJit enabled
-Opal 2.0-dev as of 9. Feb 2024, with node v20.11.0
-Puma 6.4.2, 4 workers, 4 threads
-Falcon 0.43.0, 4 workers, 4 threads
-Racer 0.1.3, defaults
-Unicorn 6.1.0, 4 workers
-Agoo 2.15.8, 4 workers, 4 threads
-Iodine 0.7.57, 4 workers, 1 thread
-Up! bun 0.0.4, 1 worker
-Up! uWS cluster 0.0.4, 4 workers
-Up! Ruby cluster 0.0.4, 4 workers
+Linux, Kernel 6.16.3
+ruby 3.4.5, YJit enabled
+Falcon 0.52.3, falcon --hybrid --forks 4 --threads 4 -b http://localhost:3000
+Iodine 0.7.58, iodine -p 3000 -w 4 -t 1
+Itsy 0.2.20, itsi -w 4
+Puma 7.0.3, puma -w 4 -t 4 -p 3000
+Up! node/ruby/uWS master, 4 workers, up -w 4
+  Opal 2.0dev PR#2746 'raise_platform_foundation'
+  Node v24.8.0
 
 running the example_rack_app from this repo, benchmarked with:
 bombardier http://localhost:3000/
 and taking the Avg
 
-on a Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz
+on a AMD(R) Ryzen(TM) 5 4500U CPU @ 2.3~4.0 GHz
 ```
 
 ## Introduction
@@ -62,15 +59,15 @@ To start experimenting:
 
 You may want to change the `gem 'opal-up'` line in the Gemfile to use up from rubygems, if you want to run your app outside of the cloned repo.
 
-For a Gemfile available from rubygems:
+For a Gemfile UP! is available from rubygems:
 `gem 'opal-up'`
 
 ## Available Commands
 
 Available with `bundle exec` within the example apps or if this gem is included in your Gemfile:
 
-- `up` - starts a cluster of workers using Opal with uWebSockets, fastest server
-- `up_bun` - starts single worker server using Bun, requires Opal bun support from [PR#2622](https://github.com/opal/opal/pull/2622)
+- `up` - starts a cluster of workers using Opal running in Node with uWebSockets, fastest server
+- `up_node` - starts a cluster of workers using Opal running in Node with ws websocket support
 - `up_ruby` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
 
 ```
@@ -125,7 +122,7 @@ To try:
 
 ## About the Benchmarks
 
-The benchmarks mainly test the overhead introduced by the rack server. 
+The benchmarks mainly test the overhead introduced by the rack server.
 
 In the 'env.to_s' benchmark, the Rack environment access and response header handling overhead are measured. Simply calling env.to_s accesses all keys and serializes them briefly. If the Rack app accesses the keys of the Rack environment and sets response headers, the overhead/latency as measured can be expected, or that amount of requests per second can be expected at most.
 
@@ -137,9 +134,7 @@ The "hello_world" benchmark measures the overhead for the simplest possible vers
 
 ### Rack Servers
 
-- [Agoo](https://github.com/ohler55/agoo)
 - [Falcon](https://github.com/socketry/falcon)
 - [Iodine](https://github.com/boazsegev/iodine)
+- [Itsy](https://github.com/wouterken/itsi)
 - [Puma](https://github.com/puma/puma)
-- [Racer](https://rubygems.org/gems/racer) (a bit old, but included here, because it uses libuv, just like Node)
-- [Unicorn](https://yhbt.net/unicorn/)
