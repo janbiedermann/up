@@ -57,7 +57,6 @@ static ID id_to_s;
 static rb_encoding *utf8_encoding;
 static rb_encoding *binary_encoding;
 
-static VALUE default_input;
 static VALUE default_logger;
 
 static VALUE rack_env_template;
@@ -931,10 +930,6 @@ void up_setup_rack_env_template(void) {
   // if present and true, indicates that the server supports partial hijacking
   // up_hash_set(rack_env_template, "rack.hijack?", Qfalse);
 
-  // The input stream is an IO-like object which contains the raw HTTP POST
-  // data
-  rb_hash_aset(rack_env_template, rack_input, default_input);
-
   // A common object interface for logging messages
   up_hash_set(rack_env_template, "rack.logger", default_logger);
 
@@ -1031,8 +1026,6 @@ void Init_up_ext(void) {
 
   rb_gc_register_address(&cStringIO);
   cStringIO = rb_const_get(rb_cObject, rb_intern("StringIO"));
-  rb_gc_register_address(&default_input);
-  default_input = rb_funcall(cStringIO, id_new, 1, empty_string);
 
   up_setup_rack_env_template();
 
