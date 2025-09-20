@@ -33,34 +33,62 @@ module Up
 
       def pending
         return -1 unless @open
-        `#@ws?.getBufferedAmount()`
+        %x{
+          if (#@ws) {
+            if (typeof #@ws.getBufferedAmount === "function") {
+              // uWS
+              return #@ws.getBufferedAmount();
+            } else {
+              // node ws
+              return #@ws.bufferedAmount;
+            }
+          }
+        }
       end
 
       def publish(channel, message)
         res = false
         %x{
+          if (typeof channel === "object") {
+            channel = channel.toString();
+          }
           if (!message.$$is_string) {
             message = JSON.stringify(message);
           }
-          res = #@server?.publish(channel, message);
-          if (#@worker) {
-            process.send({c: channel, m: message});
+          if (typeof message === "object") {
+            message = message.toString();
           }
+          res = #@server?.$publish(channel, message);
         }
         res
       end
 
       def subscribe(channel, is_pattern = false, &block)
         @sub_block = block
-        `#@ws?.subscribe(channel)`
+        %x{
+          if (typeof channel === "object") {
+            channel = channel.toString();
+          }
+          #@ws?.subscribe(channel)
+        }
       end
 
       def unsubscribe(channel, is_pattern = false)
-        `#@ws?.unsubscribe(channel)`
+        %x{
+          if (typeof channel === "object") {
+            channel = channel.toString();
+          }
+          #@ws?.unsubscribe(channel)
+        }
       end
 
       def write(data)
-        `#@ws?.send(data, false)`
+        %x{
+          if (data.$$is_string && typeof data === "object") {
+            data = data.toString();
+          }
+          #@ws?.send(data, false)
+        }
       end
     end
   end
