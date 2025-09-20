@@ -44,10 +44,9 @@ module Up
             }
           } else {
             #@worker = true;
-            function process_message_handler(message, handle) {
+            process.on('message', (message, handle) => {
               #@server.publish(message.c, message.m);
-            }
-            process.on('message', process_message_handler);
+            });
             #{super}
           }
         }
@@ -55,11 +54,17 @@ module Up
 
       def publish(channel, message)
         %x{
+          if (typeof channel === "object") {
+            channel = channel.toString();
+          }
           if (!message.$$is_string) {
             message = JSON.stringify(message);
           }
-          if (#@worker ) {
-            #@server?.publish(channel, message);
+          if (typeof message === "object") {
+            message = message.toString();
+          }
+          if (#@worker) {
+            #{super(channel, message)}
             process.send({c: channel, m: message});
           } else if (#@members) {
             for (let member of #@members) {
@@ -74,7 +79,7 @@ module Up
 
       def stop
         if Up::CLI::stoppable?
-          @members.each { |m| `m.kill()` } 
+          @members.each { |m| `m.kill()` }
           @members.clear
         end
       end

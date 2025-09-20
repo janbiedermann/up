@@ -14,29 +14,46 @@ module Up
   class << self
     def publish(channel, message)
       raise 'no instance running' unless @instance
-      @instance&.publish(channel, message)
+      @instance.publish(channel, message)
     end
   end
 
   module UWebSocket
     class Server
-      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, logger: Logger.new(STDERR))
+      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http',
+                     ca_file: nil, cert_file: nil, key_file: nil,
+                     pid_file: nil, logger: Logger.new(STDERR))
         @app = app
+        %x{
+          // If app is a promise, the resolution must happen before the handler below is called
+          if (#@app instanceof Promise) {
+            #@app.then(function (val) { #@app = val; });
+          }
+        }
         @scheme    = scheme || 'http'
         raise "unsupported scheme #{@scheme}" unless %w[http https].include?(@scheme)
         @host      = host || 'localhost'
         @port      = port&.to_i || 3000
-        @config    = { handler: self.class.name, engine: "node/#{`process.version`}" }.freeze
+        @port_s    = @port.to_s
+        @config    = {
+                      handler: self.class.name,
+                      engine: "node/#{`process.version`}",
+                      port: port,
+                      scheme: scheme,
+                      host: host,
+                      logger: logger
+                     }.freeze
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
-        @default_input = StringIO.new('', 'r')
+        @pid_file  = pid_file
         @server    = nil
         @logger    = logger
+        @t_factory = proc { |filename, _content_type| File.new(filename, 'a+') }
       end
 
       %x{
-        self.handle_headers = function(rack_headers, uws_res) {
+        function handle_headers(rack_headers, uws_res) {
           if (rack_headers.$$is_hash) {
             var header, v;
             for(header of rack_headers) {
@@ -49,35 +66,45 @@ module Up
           }
         }
 
-        self.handle_response = function(parts, uws_res) {
-          if (parts["$respond_to?"]('each')) {
-            #{`parts`.each { |part| `uws_res.write(part)` }}
-          } else if (parts["$respond_to?"]('call')) {
-            uws_res.write(parts.$call());
+        function handle_response(parts, uws_res) {
+          if (parts.$$is_array) {
+            let i = 0, l = parts.length;
+            for (; i < l; i++) { uws_res.write(parts[i]); }
+          } else {
+            if (parts.$each && parts["$respond_to?"]('each')) {
+              #{`parts`.each { |part| `uws_res.write(part)` }}
+            } else if (parts.$call && parts["$respond_to?"]('call')) {
+              uws_res.write(parts.$call());
+            }
+            if (parts.$close && parts["$respond_to?"]('close')) {
+              parts.$close();
+            }
           }
-          #{`parts`.close if `parts`.respond_to?(:close)}
         }
 
-        self.prepare_env = function(req, ins) {
-          const env = new Map();
-          env.set('rack.errors',#{STDERR});
-          env.set('rack.input', ins.default_input);
-          env.set('rack.logger', ins.logger);
-          env.set('rack.url_scheme', ins.scheme);
-          env.set('SCRIPT_NAME', "");
-          env.set('SERVER_PROTOCOL', 'HTTP/1.1');
-          env.set('HTTP_VERSION', 'HTTP/1.1');
-          env.set('SERVER_NAME', ins.host);
-          env.set('SERVER_PORT', ins.port);
-          env.set('QUERY_STRING', req.getQuery() || '');
-          env.set('REQUEST_METHOD', req.getMethod().toUpperCase());
-          env.set('PATH_INFO', req.getUrl());
+        const err = #{STDERR};
+        function prepare_env(req, ins) {
+          const env = new Map()
+            .set('rack.errors', err)
+            .set('rack.logger', ins.logger)
+            .set('rack.multipart.buffer_size', 4096)
+            .set('rack.multipart.tempfile_factory', ins.t_factory)
+            .set('rack.url_scheme', ins.scheme)
+            .set('SCRIPT_NAME', "")
+            .set('HTTP_VERSION', 'HTTP/1.1')
+            .set('SERVER_PROTOCOL', 'HTTP/1.1')
+            .set('SERVER_NAME', ins.host)
+            .set('SERVER_PORT', ins.port_s)
+            .set('QUERY_STRING', req.getQuery() || '')
+            .set('REQUEST_METHOD', req.getMethod().toUpperCase())
+            .set('PATH_INFO', req.getUrl());
+          let hdr;
           req.forEach((k, v) => {
-            let h = k.toUpperCase().replaceAll('-', '_');
-            if (h[0] === 'C' && (h === 'CONTENT_TYPE' || h === 'CONTENT_LENGTH')) {
-              env.set(h, v) ;
+            hdr = k.toUpperCase().replaceAll('-', '_');
+            if (hdr[0] === 'C' && (hdr === 'CONTENT_TYPE' || hdr === 'CONTENT_LENGTH')) {
+              env.set(hdr, v);
             } else {
-              env.set('HTTP_' + h, v) ;
+              env.set('HTTP_' + hdr, v);
             }
           });
           return env;
@@ -87,6 +114,8 @@ module Up
       def listen
         raise "already running" if @server
         ::Up.instance_variable_set(:@instance, self)
+        ::File.write(@pid_file, `process.pid.toString()`) if @pid_file
+        puts "Server PID: #{`process.pid`}"
         %x{
           const ouws = Opal.Up.UWebSocket.Server;
           const ouwc = Opal.Up.Client;
@@ -97,7 +126,7 @@ module Up
             #@server = uws.App();
           }
           #@server.post('/*', (res, req) => {
-            const env = ouws.prepare_env(req, self);
+            const env = prepare_env(req, self);
             let buffer = Buffer.from('');
             res.onData((chunk, is_last) => {
               buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
@@ -105,18 +134,18 @@ module Up
                 env.set('rack.input', #{StringIO.new(`buffer.toString()`)});
                 const rack_res = #@app.$call(env);
                 res.writeStatus(rack_res[0].toString() + ' OK');
-                ouws.handle_headers(rack_res[1], res);
-                ouws.handle_response(rack_res[2], res);
+                handle_headers(rack_res[1], res);
+                handle_response(rack_res[2], res);
                 res.end();
               }
             });
             res.onAborted(() => {});
           });
           #@server.any('/*', (res, req) => {
-            const rack_res = #@app.$call(ouws.prepare_env(req, self));
+            const rack_res = #@app.$call(prepare_env(req, self));
             res.writeStatus(rack_res[0].toString() + ' OK');
-            ouws.handle_headers(rack_res[1], res);
-            ouws.handle_response(rack_res[2], res);
+            handle_headers(rack_res[1], res);
+            handle_response(rack_res[2], res);
             res.end();
           });
           #@server.ws('/*', {
@@ -157,7 +186,7 @@ module Up
             },
             sendPingsAutomatically: true,
             upgrade: (res, req, context) => {
-              const env = ouws.prepare_env(req, self);
+              const env = prepare_env(req, self);
               env.set('rack.upgrade?', #{:websocket});
               const rack_res = #@app.$call(env);
               const handler = env.get('rack.upgrade');
@@ -167,7 +196,7 @@ module Up
                 client.open = false;
                 client.handler = handler
                 client.protocol = #{:websocket};
-                client.server = #@server;
+                client.server = self;
                 client.timeout = 120;
                 if (#@worker) {
                   client.worker = true;
@@ -182,8 +211,8 @@ module Up
                   env.delete('rack.upgrade');
                 }
                 res.writeStatus(rack_res[0].toString() + ' OK');
-                ouws.handle_headers(rack_res[1], res);
-                ouws.handle_response(rack_res[2], res);
+                handle_headers(rack_res[1], res);
+                handle_response(rack_res[2], res);
                 res.end();
               }
             },
@@ -195,8 +224,14 @@ module Up
 
       def publish(channel, message)
         %x{
+          if (typeof channel === "object") {
+            channel = channel.toString();
+          }
           if (!message.$$is_string) {
             message = JSON.stringify(message);
+          }
+          if (typeof message === "object") {
+            message = message.toString();
           }
           #@server.publish(channel, message);
         }
@@ -206,6 +241,7 @@ module Up
         if Up::CLI::stoppable?
           `#@server.close()`
           @server = nil
+          ::Up.instance_variable_set(:@instance, nil)
         end
       end
     end

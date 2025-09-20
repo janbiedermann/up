@@ -1,10 +1,3 @@
-require 'opal/platform'
-require 'nodejs'
-require 'nodejs/file'
-require 'nodejs/require'
-require 'opal-parser'
-require 'rack/builder'
-require 'up/rack_builder_patch'
 require 'up/u_web_socket/rack_cluster'
 
 module Up
