@@ -63,7 +63,6 @@ static VALUE rack_env_template;
 
 static VALUE empty_string;
 static VALUE http11;
-static VALUE rack_input;
 static VALUE rack_logger;
 static VALUE rack_upgrade_q;
 static VALUE rack_upgrade;
@@ -366,8 +365,6 @@ static void up_internal_process_post_data(uws_res_t *res, const char *chunk,
   server_s *s = (server_s *)arg;
   rb_str_cat(s->body, chunk, chunk_length);
   if (is_end) {
-    // set rack.input
-    rb_hash_aset(s->env, rack_input, rb_funcall(cStringIO, id_new, 1, s->body));
     up_internal_call_app(s, res, s->env);
     s->body = Qnil;
     s->env = Qnil;
@@ -1001,7 +998,6 @@ void Init_up_ext(void) {
 
   set_str_val(empty_string, "");
   set_str_val(http11, "HTTP/1.1");
-  set_str_val(rack_input, "rack.input");
   set_str_val(rack_logger, "rack.logger");
   set_str_val(rack_upgrade, "rack.upgrade");
   set_str_val(rack_upgrade_q, "rack.upgrade?");
