@@ -52,6 +52,7 @@ static ID id_on_message;
 static ID id_on_open;
 static ID id_port;
 static ID id_publish;
+static ID id_to_s;
 
 static rb_encoding *utf8_encoding;
 static rb_encoding *binary_encoding;
@@ -806,7 +807,7 @@ static VALUE up_server_listen(VALUE self) {
   // to complete the URL.
   rb_hash_aset(s->env_template, SERVER_NAME, s->host);
   // An optional Integer which is the port the server is running on.
-  rb_hash_aset(s->env_template, SERVER_PORT, s->port);
+  rb_hash_aset(s->env_template, SERVER_PORT, rb_funcall(s->port, id_to_s, 0));
   if (s->logger && s->logger != Qundef && s->logger != Qnil) {
     rb_hash_aset(s->env_template, rack_logger, s->logger);
   }
@@ -998,6 +999,7 @@ void Init_up_ext(void) {
   id_on_open = rb_intern("on_open");
   id_port = rb_intern("port");
   id_publish = rb_intern("publish");
+  id_to_s = rb_intern("to_s");
 
   utf8_encoding = rb_enc_find("UTF-8");
   binary_encoding = rb_enc_find("binary");
