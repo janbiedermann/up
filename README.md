@@ -16,8 +16,8 @@ A high performance Rack server for [Opal Ruby](https://opalrb.com/) and [Matz Ru
 | Itsi          |     75048.06 |       1.66 |     109468.34 |          1.14 |
 | Puma          |     11422.91 |      10.93 |      40417.73 |          3.09 |
 | Up! ruby      | +1+ 79415.88 |       1.57 | +1+ 285264.62 |          0.44 |
-| Up! node      |     21186.08 |       5.90 |      78737.33 |          1.59 |
-| Up! uWS       |     29549.18 |       4.23 | +2+ 246984.65 |          0.50 |
+| Up! node      |     22018.27 |       5.67 |      78304.31 |          1.59 |
+| Up! uWS       |     31172.71 |       4.01 | +2+ 254908.20 |          0.49 |
 
 +1+ denotes the fastest for the response type
 +2+ denotes the second fastest for the response type
