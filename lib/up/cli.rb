@@ -1,5 +1,10 @@
 require 'optparse'
+require 'opal/compiler'
+require 'opal/builder'
+require 'opal/builder/processor'
+require 'rack/builder'
 require 'up/version'
+require 'up/cli_eval'
 
 module Up
   module CLI
@@ -62,35 +67,51 @@ module Up
       if RUBY_ENGINE != 'opal'
         def setup_node
           node_cmd = `which node`
+          return true if @has_node
           if !node_cmd || node_cmd.empty?
             puts "Please install node first!"
             exit 2
           end
-          true
+          @has_node = true
         end
 
         def setup_npm
           setup_node
+          return true if @has_npm
           npm_cmd = `which npm`
           if !npm_cmd || npm_cmd.empty?
             puts "Please install npm first!"
             exit 2
           end
-          true
+          @has_npm = true
+        end
+
+        def setup_ws_node
+          setup_npm
+          return true if @has_ws_node
+          ws_node = `npm list|grep ' ws@8'`
+          `npm i ws@8.18.3` if ws_node.empty?
+          @has_ws_node = true
         end
 
         def setup_u_web_socket
           setup_npm
-          have_uws = `npm list|grep uWebSockets.js@20`
-          `npm i uNetworking/uWebSockets.js#v20.52.0` if have_uws.empty?
-          true
+          return true if @has_uws
+          uws = `npm list|grep uWebSockets.js@20`
+          if uws.empty?
+            print 'installing uWebSockets.js, may take some time ... '
+            `npm i uNetworking/uWebSockets.js#v20.52.0`
+            puts 'done'
+          end
+          @has_uws = true
         end
 
         def setup_esbuild
           setup_npm
-          have_esbuild = `npm list|grep esbuild`
-          `npm i esbuild` if have_esbuild.empty?
-          true
+          return true if @has_esbuild
+          esbuild = `npm list|grep esbuild`
+          `npm i esbuild@0.25.10` if esbuild.empty?
+          @has_esbuild = true
         end
       end
 
@@ -112,25 +133,32 @@ module Up
           lines.each do |line|
             m = /gem ['"](\w+)['"]/.match(line)
             if m && m[1] != 'opal-up' && m[1] != 'opal'
-              gems << " -g #{m[1]} -r #{m[1]}" 
+              gems << " -g #{m[1]} -r #{m[1]}"
             end
           end
         end
         gems
       end
 
-      def try_file(filename)
-        return nil unless File.exist? filename
-        ::Rack::Builder.parse_file filename
-      end
-
       def get_app(filename = 'config.ru')
         app = nil
         filename ||= 'config.ru'
-        app = try_file(filename)
-        unless app
-          filename = "#{filename}.ru"
-          app = try_file(filename)
+        unless File.exist?(filename)
+          filename += '.ru' unless filename.end_with?('.ru')
+          raise "#{filename} not found" unless File.exist?(filename)
+        end
+        if RUBY_ENGINE == 'opal'
+          src = File.read(filename)
+          builder = Opal::Builder.new
+          builder.build_str("Rack::Builder.new do\n#{src}\nend", filename)
+          app2_name = "opal_up_stage_2_#{Process.pid}"
+          File.write("#{app2_name}.js", builder.to_s)
+          `npm x esbuild -- --minify #{app2_name}.js --outfile=#{app2_name}.min.js`
+          js = File.read("#{app2_name}.min.js")
+          File.delete("#{app2_name}.js", "#{app2_name}.min.js")
+          app = eval_js(js)
+        else
+          app = ::Rack::Builder.parse_file(filename)
         end
         raise "Something wrong with #{filename}\n" unless app
         app
@@ -147,8 +175,8 @@ module Up
           sleep 0.2
           print '.'
         end
-        3.times do 
-          puts "\n\033[5;31;47mRED ALERT: boost pressure to high, cannot open release valve!1!!!\033[0m"
+        3.times do
+          puts "\n\033[5;31;47mRED ALERT: boost pressure too high, cannot open release valve!1!!!\033[0m"
           sleep 0.1
           print '.'
           sleep 0.1
