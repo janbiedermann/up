@@ -9,7 +9,7 @@ else
   Up::CLI.setup_u_web_socket
   lib_dir = File.expand_path("#{__dir__}/../lib")
   gems = Up::CLI.get_gems_for_cmd
-  `bundle exec opal --no-source-map -c -E -I. -I#{lib_dir} -g rack #{gems} #{__FILE__} -o app.js`
-  `npm x esbuild -- --minify app.js --outfile=app.min.js`
-  exec("node app.min.js -- #{ARGV.join(' ')}")
+  `bundle exec opal --no-source-map -c -E -I. -I#{lib_dir} -g rack #{gems} #{__FILE__} -o opal_up.js`
+  `npm x esbuild -- --target=node22 --minify opal_up.js --outfile=opal_up.min.js`
+  exec("node opal_up.min.js -- #{ARGV.join(' ')}")
 end
