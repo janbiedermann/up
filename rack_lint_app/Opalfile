@@ -1,0 +1,2 @@
+add_gem_dependency 'rack'
+add_load_path '.'
