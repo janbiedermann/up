@@ -6,3 +6,4 @@ package.json
 lib/up_ext.so
 lib/up_ext.bundle
 tmp
+opal_up.min.js
