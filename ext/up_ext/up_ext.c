@@ -955,7 +955,6 @@ void up_setup_rack_env_template(void) {
   // Note: uws has no way to get that information from the request
   // so set it to a static value
   rb_hash_aset(rack_env_template, SERVER_PROTOCOL, http11);
-  rb_hash_aset(rack_env_template, HTTP_VERSION, http11);
 }
 
 static VALUE up_publish(VALUE self, VALUE channel, VALUE message) {
