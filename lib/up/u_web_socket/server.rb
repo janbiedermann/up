@@ -46,6 +46,9 @@ module Up
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
+        if (@scheme == 'https' || @scheme == 'http2') && (@key_file.nil? || @cert_file.nil?)
+          raise "for https :key_file and :cert_file args must be given"
+        end
         @pid_file  = pid_file
         @server    = nil
         @logger    = logger
@@ -90,8 +93,7 @@ module Up
             .set('rack.multipart.buffer_size', 4096)
             .set('rack.multipart.tempfile_factory', ins.t_factory)
             .set('rack.url_scheme', ins.scheme)
-            .set('SCRIPT_NAME', "")
-            .set('HTTP_VERSION', 'HTTP/1.1')
+            .set('SCRIPT_NAME', '')
             .set('SERVER_PROTOCOL', 'HTTP/1.1')
             .set('SERVER_NAME', ins.host)
             .set('SERVER_PORT', ins.port_s)
