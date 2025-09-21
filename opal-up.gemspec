@@ -14,17 +14,16 @@ Gem::Specification.new do |spec|
   spec.license       = 'MIT'
   spec.files         = `git ls-files -- bin ext lib LICENSE README.md`.split("\n")
   spec.bindir        = 'bin'
-  spec.executables   = %w[up up_bun up_ruby]
+  spec.executables   = %w[up up_node up_ruby]
   spec.require_paths = %w[lib]
   spec.extensions    = %w[ext/up_ext/extconf.rb]
   spec.required_ruby_version = '>= 3.0.0'
 
-  spec.add_dependency 'base64'
-  spec.add_dependency 'logger', '~> 1.6.0'
-  spec.add_dependency 'opal', '>= 1.8.2', '< 3.0.0'
-  spec.add_dependency 'rack', '~> 3.0.9'
+  spec.add_dependency 'base64', '~> 0.3.0'
+  spec.add_dependency 'logger', '~> 1.7.0'
+  spec.add_dependency 'opal', '>= 1.999.999', '< 3.0.0'
+  spec.add_dependency 'rack', '~> 3.2.1'
 
   spec.add_development_dependency 'rake', '~> 13.3.0'
-  spec.add_development_dependency 'rake-compiler', '~> 1.2.7'
-  spec.add_development_dependency 'rspec', '~> 3.12.0'
+  spec.add_development_dependency 'rake-compiler', '~> 1.3.0'
 end
