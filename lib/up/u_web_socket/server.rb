@@ -71,13 +71,17 @@ module Up
 
         function handle_response(parts, uws_res) {
           if (parts.$$is_array) {
-            let i = 0, l = parts.length;
-            for (; i < l; i++) { uws_res.write(parts[i]); }
+            let i = 0, l = parts.length, part;
+            for (; i < l; i++) {
+              part = parts[i];
+              uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part);
+            }
           } else {
             if (parts.$each && parts["$respond_to?"]('each')) {
-              #{`parts`.each { |part| `uws_res.write(part)` }}
+              #{`parts`.each { |part| `uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part)` }}
             } else if (parts.$call && parts["$respond_to?"]('call')) {
-              uws_res.write(parts.$call());
+              let part = parts.$call();
+              uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part);
             }
             if (parts.$close && parts["$respond_to?"]('close')) {
               parts.$close();
