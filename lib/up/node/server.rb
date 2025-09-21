@@ -9,6 +9,7 @@ require 'up/client'
   module.paths.push(process.cwd() + '/node_modules');
   const http = require('node:http');
   const https = require('node:https');
+  const http2 = require('node:http2');
   const fs = require('node:fs');
   const web_socket = require('ws');
   const channels = new Map();
@@ -35,7 +36,7 @@ module Up
           }
         }
         @scheme    = scheme || 'http'
-        raise "unsupported scheme #{@scheme}" unless %w[http https].include?(@scheme)
+        raise "unsupported scheme #{@scheme}" unless %w[http http2 https].include?(@scheme)
         @host      = host || 'localhost'
         @port      = port&.to_i || 3000
         @port_s    = @port.to_s
@@ -50,6 +51,9 @@ module Up
         @ca_file   = ca_file
         @cert_file = cert_file
         @key_file  = key_file
+        if (@scheme == 'https' || @scheme == 'http2') && (@key_file.nil? || @cert_file.nil?)
+          raise "for https or http2 :key_file and :cert_file args must be given"
+        end
         @pid_file  = pid_file
         @server    = nil
         @logger    = logger
@@ -57,7 +61,7 @@ module Up
       end
 
       %x{
-        self.ws_subscribe = function(channel, ws) {
+        function ws_subscribe(channel, ws) {
           let c = channels.get(channel);
           if (!c) {
             c = new Set();
@@ -66,7 +70,7 @@ module Up
           c.add(ws);
         }
 
-        self.ws_unsubscribe = function(channel, ws) {
+        function ws_unsubscribe(channel, ws) {
           let c = channels.get(channel);
           if (c) {
             c.delete(ws);
@@ -110,14 +114,17 @@ module Up
             .set('rack.multipart.buffer_size', 4096)
             .set('rack.multipart.tempfile_factory', ins.t_factory)
             .set('rack.url_scheme', ins.scheme)
-            .set('SCRIPT_NAME', "")
-            .set('HTTP_VERSION', req.httpVersion)
-            .set('SERVER_PROTOCOL', req.httpVersion)
+            .set('SCRIPT_NAME', '')
+            .set('SERVER_PROTOCOL', 'HTTP/' + req.httpVersion)
             .set('SERVER_NAME', ins.host)
             .set('SERVER_PORT', ins.port_s)
-            .set('QUERY_STRING', "")
-            .set('REQUEST_METHOD', req.method)
-            .set('PATH_INFO', req.url);
+            .set('REQUEST_METHOD', req.method);
+          let qi = req.url.indexOf('?');
+          if (qi > 0) {
+            env.set('QUERY_STRING', req.url.slice(qi + 1)).set('PATH_INFO', req.url.slice(0, qi));
+          } else {
+            env.set('QUERY_STRING', '').set('PATH_INFO', req.url);
+          }
           let hdr, hdru, hds = req.headers;
           for (hdr in hds) {
             hdru = hdr.toUpperCase().replaceAll('-', '_');
@@ -147,9 +154,18 @@ module Up
             handle_response(rack_res[2], res);
             res.end();
           }
+          let options = {};
+          if (#@scheme == 'https' || #@scheme == 'http2') {
+            options.cert = fs.readFileSync(#@cert_file);
+            options.key = fs.readFileSync(#@key_file);
+            if (#@ca_file && #@ca_file != nil) { options.ca = fs.readFileSync(#@ca_file); }
+          }
           if (#@scheme == 'https') {
-            #@server = https.createServer({ ca: fs.readFileSync(#@ca_file), cert: fs.readFileSync(#@cert_file), key: fs.readFileSync(#@key_file) }, handler);
-          } else {
+            #@server = https.createServer(options, handler);
+          } else if (#@scheme == 'http2') {
+            options.allowHTTP1 = true;
+            #@server = http2.createSecureServer(options, handler);
+          } else if (#@scheme == 'http') {
             #@server = http.createServer(handler);
           }
           #@ws_server = new web_socket.WebSocketServer({ noServer: true });
@@ -170,26 +186,22 @@ module Up
                 client.worker = true;
               }
               #@ws_server.handleUpgrade(req, socket, head, function (ws, req) {
-                ws.on('close', function(code, message) {
+                ws.on('close', (code, message) => {
                   if (typeof(client.handler.$on_close) === 'function') {
                     client.ws = ws;
                     client.open = false;
                     client.handler.$on_close(client);
                     client.ws = null;
                   }});
-                ws.on('message', function(message, isBinary) {
+                ws.on('message', (message, isBinary) => {
                   if (typeof(client.handler.$on_message) === 'function') {
                     const msg = deco.decode(message);
                     client.ws = ws;
                     client.handler.$on_message(client, msg);
                     client.ws = null;
                 }});
-                ws.subscribe = function(channel) {
-                  ouns.ws_subscribe(channel, ws);
-                }
-                ws.unsubscribe = function(channel) {
-                  ouns.ws_unsubscribe(channel, ws);
-                }
+                ws.subscribe = (channel) => { ws_subscribe(channel, ws); }
+                ws.unsubscribe = (channel) => { ws_unsubscribe(channel, ws); }
                 if (typeof(client.handler.$on_open) === 'function') {
                   if (ws.readyState === 1) {
                     client.ws = ws;
