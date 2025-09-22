@@ -6,13 +6,13 @@ if RUBY_ENGINE == 'opal'
 end
 
 module Up
-  class Client
+  class PubSubClient
     # instance vars are set by the server
 
     attr_reader :env, :handler, :protocol, :timeout
 
     def handler=(h)
-      @handler.on_close(self)
+      h.on_close(self)
       @handler = h
       @handler.on_open(self)
     end

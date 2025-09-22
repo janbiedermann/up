@@ -121,10 +121,11 @@ module Up
         raise "already running" if @server
         ::Up.instance_variable_set(:@instance, self)
         ::File.write(@pid_file, `process.pid.toString()`) if @pid_file
+        # TODO use logger
         puts "Server PID: #{`process.pid`}"
         %x{
           const ouws = Opal.Up.UWebSocket.Server;
-          const ouwc = Opal.Up.Client;
+          const ouwc = Opal.Up.PubSubClient;
           const deco = new TextDecoder();
           if (#@scheme == 'https') {
             #@server = uws.SSLApp({ ca_file_name: #@ca_file, cert_file_name: #@cert_file, key_file_name: #@key_file });
@@ -203,10 +204,6 @@ module Up
                 client.handler = handler
                 client.protocol = #{:websocket};
                 client.server = self;
-                client.timeout = 120;
-                if (#@worker) {
-                  client.worker = true;
-                }
                 res.upgrade({ client: client },
                   req.getHeader('sec-websocket-key'),
                   req.getHeader('sec-websocket-protocol'),

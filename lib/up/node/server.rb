@@ -146,10 +146,11 @@ module Up
         raise "already running" if @server
         ::Up.instance_variable_set(:@instance, self)
         ::File.write(@pid_file, `process.pid.toString()`) if @pid_file
+        # TODO use logger
         puts "Server PID: #{`process.pid`}"
         %x{
           const ouns = Opal.Up.Node.Server;
-          const ouwc = Opal.Up.Client;
+          const ouwc = Opal.Up.PubSubClient;
           const deco = new TextDecoder();
           function handler(req, res) {
             const rack_res = #@app.$call(prepare_env(req, self));
@@ -185,10 +186,6 @@ module Up
               client.handler = handler
               client.protocol = #{:websocket};
               client.server = self;
-              client.timeout = 120;
-              if (#@worker) {
-                client.worker = true;
-              }
               #@ws_server.handleUpgrade(req, socket, head, function (ws, req) {
                 ws.on('close', (code, message) => {
                   if (typeof(client.handler.$on_close) === 'function') {

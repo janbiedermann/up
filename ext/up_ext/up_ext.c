@@ -23,7 +23,7 @@
 static VALUE mUp;
 static VALUE mRuby;
 static VALUE cServer;
-static VALUE cClient;
+static VALUE cPubSubClient;
 static VALUE cStringIO;
 static VALUE cLogger;
 
@@ -428,7 +428,7 @@ static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
   }
 }
 
-const rb_data_type_t up_client_t = {.wrap_struct_name = "Up::Client",
+const rb_data_type_t up_client_t = {.wrap_struct_name = "Up::PubSubClient",
                                     .function = {.dmark = NULL,
                                                  .dfree = NULL,
                                                  .dsize = NULL,
@@ -733,7 +733,7 @@ static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
 
     VALUE *client = malloc(sizeof(VALUE));
     rb_gc_register_address(client);
-    *client = rb_class_new_instance(0, NULL, cClient);
+    *client = rb_class_new_instance(0, NULL, cPubSubClient);
     rb_ivar_set(*client, at_env, renv);
     rb_ivar_set(*client, at_open, false);
     rb_ivar_set(*client, at_handler, rhandler);
@@ -1027,14 +1027,14 @@ void Init_up_ext(void) {
   mUp = rb_define_module("Up");
   rb_define_singleton_method(mUp, "publish", up_publish, 2);
 
-  cClient = rb_define_class_under(mUp, "Client", rb_cObject);
-  rb_define_alloc_func(cClient, up_client_alloc);
-  rb_define_method(cClient, "close", up_client_close, 0);
-  rb_define_method(cClient, "pending", up_client_pending, 0);
-  rb_define_method(cClient, "publish", up_client_publish, 2);
-  rb_define_method(cClient, "subscribe", up_client_subscribe, -1);
-  rb_define_method(cClient, "unsubscribe", up_client_unsubscribe, -1);
-  rb_define_method(cClient, "write", up_client_write, 1);
+  cPubSubClient = rb_define_class_under(mUp, "PubSubClient", rb_cObject);
+  rb_define_alloc_func(cPubSubClient, up_client_alloc);
+  rb_define_method(cPubSubClient, "close", up_client_close, 0);
+  rb_define_method(cPubSubClient, "pending", up_client_pending, 0);
+  rb_define_method(cPubSubClient, "publish", up_client_publish, 2);
+  rb_define_method(cPubSubClient, "subscribe", up_client_subscribe, -1);
+  rb_define_method(cPubSubClient, "unsubscribe", up_client_unsubscribe, -1);
+  rb_define_method(cPubSubClient, "write", up_client_write, 1);
 
   mRuby = rb_define_module_under(mUp, "Ruby");
 
