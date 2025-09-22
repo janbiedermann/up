@@ -37,7 +37,6 @@ static ID at_port;
 static ID at_protocol;
 static ID at_secret;
 static ID at_server;
-static ID at_timeout;
 static ID at_workers;
 static ID id_app;
 static ID id_call;
@@ -460,7 +459,7 @@ static VALUE up_client_pending(VALUE self) {
 static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
                                       VALUE message) {
   const char *opening_line = "POST " INTERNAL_PUBLISH_PATH " HTTP/1.1\r\n";
-  const char *host_header = "Host: localhost\r\n";
+  const char *host_header = "Host: 127.0.0.1\r\n";
   const char *secret = "Secret: ";
   char secret_header[50];
   memcpy(secret_header, secret, 8);
@@ -522,7 +521,6 @@ static VALUE up_client_publish(VALUE self, VALUE channel, VALUE message) {
         uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel),
                     RSTRING_PTR(message), RSTRING_LEN(message), TEXT, false);
     if (s->member_id > 0) {
-
       // publish to cluster members
       long i;
       for (i = 1; i <= s->workers; i++) {
@@ -655,17 +653,6 @@ void up_ws_drain_handler(uws_websocket_t *ws, void *user_data) {
   DATA_PTR(*client) = NULL;
 }
 
-void up_ws_ping_handler(uws_websocket_t *ws, const char *message, size_t length,
-                        void *user_data) {
-  /* You don't need to handle this one, we automatically respond to pings as
-   * per standard */
-}
-
-void up_ws_pong_handler(uws_websocket_t *ws, const char *message, size_t length,
-                        void *user_data) {
-  /* You don't need to handle this one either */
-}
-
 static void up_ws_close_handler(uws_websocket_t *ws, int code,
                                 const char *message, size_t length,
                                 void *user_data) {
@@ -738,7 +725,6 @@ static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
     rb_ivar_set(*client, at_open, false);
     rb_ivar_set(*client, at_handler, rhandler);
     rb_ivar_set(*client, at_protocol, sym_websocket);
-    rb_ivar_set(*client, at_timeout, INT2FIX(120));
     rb_ivar_set(*client, at_server, s->self);
 
     const char *ws_key = NULL;
@@ -837,11 +823,11 @@ static VALUE up_server_listen(VALUE self) {
       rb_raise(rb_eTypeError, "cluster secret of unknown type");
     memcpy(s->secret, RSTRING_PTR(rsecret), 36);
     s->secret[36] = '\0';
-    uws_app_any(USE_SSL, s->app, INTERNAL_PUBLISH_PATH,
+    uws_app_post(0, s->app, INTERNAL_PUBLISH_PATH,
                 up_internal_publish_handler, (void *)s);
     uws_app_listen_config_t config_internal = {.port = config.port +
                                                        (int)s->member_id,
-                                               .host = "localhost",
+                                               .host = "127.0.0.1",
                                                .options = 0};
     uws_app_listen_with_config(false, s->app, config_internal,
                                up_server_cluster_listen_handler, NULL);
@@ -857,15 +843,14 @@ static VALUE up_server_listen(VALUE self) {
   uws_app_any(USE_SSL, s->app, "/*", up_server_any_handler, (void *)s);
   uws_ws(USE_SSL, s->app, "/*",
          (uws_socket_behavior_t){.compression = DISABLED,
+                                 .sendPingsAutomatically = true,
                                  .maxPayloadLength = 5 * 1024 * 1024,
                                  .idleTimeout = 120,
                                  .upgrade = up_ws_upgrade_handler,
                                  .open = up_ws_open_handler,
                                  .message = up_ws_message_handler,
                                  .close = up_ws_close_handler,
-                                 .drain = up_ws_drain_handler,
-                                 .ping = up_ws_ping_handler,
-                                 .pong = up_ws_pong_handler},
+                                 .drain = up_ws_drain_handler},
          s);
   uws_app_listen_with_config(USE_SSL, s->app, config, up_server_listen_handler,
                              NULL);
@@ -975,7 +960,6 @@ void Init_up_ext(void) {
   at_protocol = rb_intern("@protocol");
   at_secret = rb_intern("@secret");
   at_server = rb_intern("@server");
-  at_timeout = rb_intern("@timeout");
   at_workers = rb_intern("@workers");
   id_app = rb_intern("app");
   id_call = rb_intern("call");
