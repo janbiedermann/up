@@ -62,10 +62,9 @@ module Up
             #{super(channel, message)}
             process.send({c: channel, m: message});
           } else if (#@members) {
-            for (let member of #@members) {
-              if (member !== worker) {
-                member.send(message);
-              }
+            let member;
+            for (member of #@members) {
+              member.send(message);
             }
           }
         }
