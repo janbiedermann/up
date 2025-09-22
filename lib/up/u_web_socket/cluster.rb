@@ -4,7 +4,6 @@ require 'up/u_web_socket/server'
 %x{
   const process = require('node:process');
   const cluster = require('node:cluster');
-  const filesys = require('node:fs') ;
   const num_workers = require('node:os').availableParallelism();
 }
 

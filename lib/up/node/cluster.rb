@@ -2,6 +2,7 @@
 require 'up/node/server'
 
 %x{
+  const process = require('node:process');
   const cluster = require('node:cluster');
   const num_workers = require('node:os').availableParallelism();
 }
