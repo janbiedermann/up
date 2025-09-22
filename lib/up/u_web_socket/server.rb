@@ -2,7 +2,7 @@
 require 'logger'
 require 'stringio'
 require 'up/cli'
-require 'up/client'
+require 'up/pub_sub_client'
 
 %x{
   const process = require('node:process');

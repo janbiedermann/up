@@ -23,7 +23,8 @@ module Up
           if (cluster.isPrimary) {
             #{
               File.write(@pid_file, `process.pid.toString()`) if @pid_file
-              puts "Server PID: #{`process.pid`}"
+              # TODO use logger
+              puts "Cluster Controller PID: #{`process.pid`}"
             }
             cluster.on('message', (worker, message, handle) => {
               if (message.c && message.m) {

@@ -2,7 +2,7 @@
 require 'logger'
 require 'stringio'
 require 'up/cli'
-require 'up/client'
+require 'up/pub_sub_client'
 
 %x{
   const process = require('node:process');
@@ -224,8 +224,8 @@ module Up
                 env.delete('rack.upgrade');
               }
               res.statusCode = rack_res[0];
-              ouws.handle_headers(rack_res[1], res);
-              ouws.handle_response(rack_res[2], res);
+              handle_headers(rack_res[1], res);
+              handle_response(rack_res[2], res);
               res.end();
             }
           });
@@ -234,6 +234,10 @@ module Up
       end
 
       def publish(channel, message)
+        internal_publish(channel, message)
+      end
+
+      def internal_publish(channel, message)
         %x{
           if (typeof channel === "object") {
             channel = channel.toString();
@@ -261,12 +265,13 @@ module Up
           }
         }
       end
-      alias internal_publish publish
 
       def stop
         if Up::CLI::stoppable?
           `#@server.close()`
+          `#@ws_server.close()`
           @server = nil
+          @ws_server = nil
           ::Up.instance_variable_set(:@instance, nil)
         end
       end

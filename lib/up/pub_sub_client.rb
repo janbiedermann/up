@@ -11,18 +11,8 @@ module Up
 
     attr_reader :env, :handler, :protocol, :timeout
 
-    def handler=(h)
-      h.on_close(self)
-      @handler = h
-      @handler.on_open(self)
-    end
-
     def open?
       @open
-    end
-
-    def pubsub?
-      true
     end
 
     if RUBY_ENGINE == 'opal'
@@ -87,7 +77,7 @@ module Up
           if (data.$$is_string && typeof data === "object") {
             data = data.toString();
           }
-          #@ws?.send(data, false)
+          #@ws?.send(data)
         }
       end
     end

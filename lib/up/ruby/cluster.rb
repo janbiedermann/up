@@ -31,7 +31,7 @@ module Up
         end
         unless @member_id
           File.write(@pid_file, Process.pid.to_s) if @pid_file
-          puts "Server PID: #{Process.pid}"
+          puts "Cluster Controller PID: #{Process.pid}"
           install_signal_handlers
           Process.waitall
         end
