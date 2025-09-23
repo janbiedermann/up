@@ -78,7 +78,9 @@ module Up
             }
           } else {
             if (parts.$each && parts["$respond_to?"]('each')) {
-              #{`parts`.each { |part| `uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part)` }}
+              #{`parts`.each { |part|
+                `uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part)`
+              }}
             } else if (parts.$call && parts["$respond_to?"]('call')) {
               let part = parts.$call();
               uws_res.write(typeof part === "object" && part.$$is_string ? part.toString() : part);
@@ -221,7 +223,7 @@ module Up
             },
 
           });
-          #@server.listen(#@port, #@host, () => { console.log(`Server is running on ${#@scheme}://${#@host}:${#@port}`)});
+          #@server.listen(#@port, #@host, ()=>{ console.log(`Server is running on ${#@scheme}://${#@host}:${#@port}`)});
         }
       end
 

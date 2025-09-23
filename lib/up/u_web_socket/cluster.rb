@@ -14,7 +14,9 @@ module Up
                      ca_file: nil, cert_file: nil, key_file: nil,
                      pid_file: nil,
                      logger: Logger.new(STDERR), workers: nil)
-        super(app: app, host: host, port: port, scheme: scheme, ca_file: ca_file, cert_file: cert_file, key_file: key_file, logger: logger)
+        super(app: app, host: host, port: port, scheme: scheme,
+              ca_file: ca_file, cert_file: cert_file, key_file: key_file,
+              logger: logger)
         @workers = workers || `num_workers`
         @pid_file = pid_file
         @members = []

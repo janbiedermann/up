@@ -10,8 +10,12 @@ require 'up/node/server'
 module Up
   module Node
     class Cluster < Up::Node::Server
-      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http', ca_file: nil, cert_file: nil, key_file: nil, workers: nil, logger: Logger.new(STDERR))
-        super(app: app, host: host, port: port, scheme: scheme, ca_file: ca_file, cert_file: cert_file, key_file: key_file, logger: logger)
+      def initialize(app:, host: 'localhost', port: 3000, scheme: 'http',
+                     ca_file: nil, cert_file: nil, key_file: nil,
+                     workers: nil, logger: Logger.new(STDERR))
+        super(app: app, host: host, port: port, scheme: scheme,
+              ca_file: ca_file, cert_file: cert_file, key_file: key_file,
+              logger: logger)
         @workers = workers || `num_workers`
         @members = []
       end
