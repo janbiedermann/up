@@ -88,7 +88,7 @@ When using secure sockets, the -a, -c and -k options must be provided
 ```
 ## Supported Features
 
-Up! implements the [Rack Spec as of Rack 3.0](https://github.com/rack/rack/blob/main/SPEC.rdoc) with the following differences:
+Up! implements the [Rack Spec as of Rack 3.2](https://github.com/rack/rack/blob/main/SPEC.rdoc) with the following differences:
 - `rack.hijack` is not implemented, but `rack.upgrade` instead is, see "Websockets" below
 - Tempfile support is currently incomplete, affecting a few keys in the Rack Env ('tempfile' missing in Opal).
 - Some Rack modules/classes still have issues when run in Opal and may not work as expected
