@@ -1,10 +1,10 @@
 source 'https://rubygems.org'
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-gem 'opal' # , github: 'opal/opal'
-gem 'rack', path: '../../rack'
-gem 'opal-up', path: '../'
-gem 'mustermann', path: '../../mustermann/mustermann'
-gem 'rack-protection', path: '../../sinatra/rack-protection'
-gem 'rack-session', path: '../../rack-session'
-gem 'sinatra', path: '../../sinatra'
+gem 'opal', github: 'janbiedermann/opal', branch: 'raise_platform_foundation'
+# gem 'rack' #, path: '../../rack'
+# gem 'opal-up', path: '../'
+# gem 'mustermann', path: '../../mustermann/mustermann'
+# gem 'rack-protection', path: '../../sinatra/rack-protection'
+# gem 'rack-session', path: '../../rack-session'
+gem 'sinatra' #, path: '../../sinatra'

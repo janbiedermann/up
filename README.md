@@ -66,7 +66,7 @@ For a Gemfile UP! is available from rubygems:
 
 Available with `bundle exec` within the example apps or if this gem is included in your Gemfile:
 
-- `up` - starts a cluster of workers using Opal running in Node with uWebSockets, fastest server
+- `up` - starts a cluster of workers using Opal running in Node with uWebSockets
 - `up_node` - starts a cluster of workers using Opal running in Node with ws websocket support
 - `up_ruby` - starts a cluster of workers using Ruby with uWebSockets in a native extension, does not support the --secure options/TLS
 

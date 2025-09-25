@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary       = 'Rack server for Opal and Ruby'
   spec.description   = 'High performance Rack server for Opal and Ruby'
   spec.homepage      = 'https://github.com/janbiedermann/up'
-  spec.license       = 'MIT'
+  spec.license       = 'MIT, Apache 2.0'
   spec.files         = `git ls-files -- bin ext lib LICENSE README.md`.split("\n")
   spec.bindir        = 'bin'
   spec.executables   = %w[up up_node up_ruby]
@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'base64', '~> 0.3.0'
   spec.add_dependency 'logger', '~> 1.7.0'
-  spec.add_dependency 'opal', '>= 1.999.999', '< 3.0.0'
+  spec.add_dependency 'opal', '> 1.999.999', '< 3.0.0'
   spec.add_dependency 'rack', '~> 3.2.1'
 
   spec.add_development_dependency 'rake', '~> 13.3.0'
