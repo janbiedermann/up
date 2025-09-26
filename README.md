@@ -48,19 +48,32 @@ Its not yet a generic, all purpose Rack server, but good for further experimenta
 
 Its a intention of this project, to serve as a tool for enhancing Opal Ruby and porting Rack apps from Matz to Opal Ruby.
 
+There are 3 implementations of the rack server in this repo:
+
+- up_ruby - using a uWebScokets based native extension for Matz Ruby
+- up_node - using standard node for Opal Ruby
+- up - using node with uWebSockets.js for Opal Ruby
+
 ## Getting started
 
-To start experimenting:
+### with the Opal version
+
+To start experimenting with the Opal version:
 - clone this repo
 - cd into it, bundle install
 - cd example_rack_app
 - bundle install
 - bundle exec up
 
-You may want to change the `gem 'opal-up'` line in the Gemfile to use up from rubygems, if you want to run your app outside of the cloned repo.
+### with the Ruby version
 
-For a Gemfile UP! is available from rubygems:
-`gem 'opal-up'`
+To start experimenting with the Ruby version:
+- clone this repo
+- cd into it, bundle install
+- rake compile
+- cd example_rack_app
+- bundle install
+- bundle exec up_ruby
 
 ## Available Commands
 
@@ -100,7 +113,8 @@ A example RackApp using WebSockets and PubSub is provided in the 'example_rack_w
 
 ## Roda
 
-A example app for Roda is provided and _appears_ working with the following patches applied:
+Roda works fine with up_ruby.
+A example app for Roda is provided and _appears_ working with up_node or up (uWebSockets.js) with the following patches applied:
 
 - [Changes required to make Roda _appear_ to work](https://github.com/jeremyevans/roda/compare/master...janbiedermann:roda:master)
 - [Changes required to make Rack with Roda _appear_ to work](https://github.com/janbiedermann/rack/commit/1dadea0f9813c2df94715052d2277af13f7d0c0c)
@@ -112,9 +126,9 @@ To try:
 - set paths in the example_roda_app to point to your cloned rack & roda repos
 - and up! the server
 
-## Sinatra, others ...
+## Sinatra, Rails, others ...
 
-... currently do not work! A example app for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
+... currently only work with up_ruby, with up_node or up (uWebSockets.js) they do not work! A example app for Sinatra is provided, for convenience of developing and expanding the capabilities of Opal.
 
 - [Sinatra patches](https://github.com/sinatra/sinatra/compare/main...janbiedermann:sinatra:main)
 - [Mustermann patches](https://github.com/sinatra/mustermann/compare/main...janbiedermann:mustermann:main)
