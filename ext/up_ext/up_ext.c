@@ -56,12 +56,14 @@ static ID id_to_s;
 static rb_encoding *utf8_encoding;
 static rb_encoding *binary_encoding;
 
+static VALUE default_input;
 static VALUE default_logger;
 
 static VALUE rack_env_template;
 
 static VALUE empty_string;
 static VALUE http11;
+static VALUE rack_input;
 static VALUE rack_logger;
 static VALUE rack_upgrade_q;
 static VALUE rack_upgrade;
@@ -364,6 +366,8 @@ static void up_internal_process_post_data(uws_res_t *res, const char *chunk,
   server_s *s = (server_s *)arg;
   rb_str_cat(s->body, chunk, chunk_length);
   if (is_end) {
+    // set rack.input
+    rb_hash_aset(s->env, rack_input, rb_funcall(cStringIO, id_new, 1, s->body));
     up_internal_call_app(s, res, s->env);
     s->body = Qnil;
     s->env = Qnil;
@@ -912,6 +916,10 @@ void up_setup_rack_env_template(void) {
   // if present and true, indicates that the server supports partial hijacking
   // up_hash_set(rack_env_template, "rack.hijack?", Qfalse);
 
+  // The input stream is an IO-like object which contains the raw HTTP POST
+  // data
+  rb_hash_aset(rack_env_template, rack_input, default_input);
+
   // A common object interface for logging messages
   up_hash_set(rack_env_template, "rack.logger", default_logger);
 
@@ -981,6 +989,7 @@ void Init_up_ext(void) {
 
   set_str_val(empty_string, "");
   set_str_val(http11, "HTTP/1.1");
+  set_str_val(rack_input, "rack.input");
   set_str_val(rack_logger, "rack.logger");
   set_str_val(rack_upgrade, "rack.upgrade");
   set_str_val(rack_upgrade_q, "rack.upgrade?");
@@ -1005,6 +1014,8 @@ void Init_up_ext(void) {
 
   rb_gc_register_address(&cStringIO);
   cStringIO = rb_const_get(rb_cObject, rb_intern("StringIO"));
+  rb_gc_register_address(&default_input);
+  default_input = rb_funcall(cStringIO, id_new, 1, empty_string);
 
   up_setup_rack_env_template();
 
