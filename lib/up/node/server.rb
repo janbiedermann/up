@@ -154,12 +154,27 @@ module Up
           const ouns = Opal.Up.Node.Server;
           const ouwc = Opal.Up.PubSubClient;
           const deco = new TextDecoder();
-          function handler(req, res) {
-            const rack_res = #@app.$call(prepare_env(req, self));
+          function call_app(env, res) {
+            const rack_res = #@app.$call(env);
             res.statusCode = rack_res[0];
             handle_headers(rack_res[1], res);
             handle_response(rack_res[2], res);
             res.end();
+          }
+          function handler(req, res) {
+            let env = prepare_env(req, self);
+            if (req.method === 'POST') {
+              let buffer = Buffer.from('');
+              req.on('data', (data) => {
+                buffer = Buffer.concat([buffer, Buffer.from(data)]);
+              });
+              req.on('end', () => {
+                env.set('rack.input', #{StringIO.new(`buffer.toString()`)});
+                call_app(env, res);
+              });
+            } else {
+              call_app(env, res);
+            }
           }
           let options = {};
           if (#@scheme == 'https' || #@scheme == 'http2') {
