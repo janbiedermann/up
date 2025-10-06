@@ -417,7 +417,7 @@ up_server_cluster_listen_handler(struct us_listen_socket_t *listen_socket,
                                  uws_app_listen_config_t config, void *arg) {
   if (listen_socket) {
     cluster_socket = listen_socket;
-    fprintf(stderr, "Internal Cluster communication on http://localhost:%d\n",
+    fprintf(stderr, "Internal Cluster communication on http://127.0.0.1:%d\n",
             config.port);
   }
 }

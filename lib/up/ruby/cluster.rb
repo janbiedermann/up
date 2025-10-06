@@ -16,7 +16,7 @@ module Up
         @secret = Random.uuid
         @workers = workers || Etc.nprocessors
         @members = []
-        @localhost_addr = TCPSocket.getaddress('localhost')
+        @localhost_addr = '127.0.0.1'
       end
 
       def listen
