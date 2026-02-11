@@ -15,6 +15,19 @@ module Up
         @server = nil
       end
     end
+
+    module RackServer
+      def self.run(app, options = {})
+        raise "already running" if @server
+        @server = Up::Ruby::Server.new(app: app, **options).listen
+        true
+      end
+
+      def self.shutdown
+        @server&.stop
+        @server = nil
+      end
+    end
   end
 end
 
