@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'opal-up'
   spec.version       = Up::VERSION
   spec.authors       = ['Jan Biedermann']
-  spec.email         = ['jan@kursator.de']
+  spec.email         = ['jan@isomorfeus.com']
 
   spec.summary       = 'Rack server for Opal and Ruby'
   spec.description   = 'High performance Rack server for Opal and Ruby'
@@ -22,8 +22,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'base64', '~> 0.3.0'
   spec.add_dependency 'logger', '~> 1.7.0'
   spec.add_dependency 'opal', '> 1.999.999', '< 3.0.0'
-  spec.add_dependency 'rack', '~> 3.2.1'
+  spec.add_dependency 'rack', '~> 3.2.4'
 
-  spec.add_development_dependency 'rake', '~> 13.3.0'
-  spec.add_development_dependency 'rake-compiler', '~> 1.3.0'
+  spec.add_development_dependency 'rake', '~> 13.3.1'
+  spec.add_development_dependency 'rake-compiler', '~> 1.3.1'
 end

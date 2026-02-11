@@ -3,7 +3,7 @@ if RUBY_ENGINE == 'ruby'
   # ensure up! contenders use a JIT
   if defined?(RubyVM::ZJIT)
     RubyVM::ZJIT.enable
-  else
+  elsif defined?(RubyVM::YJIT)
     RubyVM::YJIT.enable
   end
 end

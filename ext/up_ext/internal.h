@@ -38,7 +38,7 @@
 #include "epoll_kqueue.h"
 #endif
 #ifdef LIBUS_USE_LIBUV
-#include "internal/eventing/libuv.h"
+#include "libuv.h"
 #endif
 #ifdef LIBUS_USE_GCD
 #include "internal/eventing/gcd.h"

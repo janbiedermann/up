@@ -1,12 +1,17 @@
 #include "libusockets.h"
 #include "libuwebsockets.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#endif
+
 #include <ruby.h>
 #include <ruby/encoding.h>
 #include <signal.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #define USE_SSL 0
@@ -95,7 +100,7 @@ struct us_listen_socket_t *cluster_socket;
 
 #define to_upper(c) (((c) >= 'a' && (c) <= 'z') ? ((c) & ~32) : (c))
 
-static inline long ltoa(char *dest, long value) {
+static inline long ltoa_i(char *dest, long value) {
   char *ptr = dest, *ptr1 = dest, tmp_char;
   long tmp;
 
@@ -257,7 +262,7 @@ static bool up_internal_set_response_status(uws_res_t *res, VALUE rstatus) {
     a_long = FIX2INT(rstatus);
     if (a_long < 0 || a_long > 999)
       return false;
-    a_long = ltoa(status, a_long);
+    a_long = ltoa_i(status, a_long);
   } else if (type == T_STRING) {
     a_long = RSTRING_LEN(rstatus);
     if (a_long > 6)
@@ -473,7 +478,7 @@ static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
   long c_length = RSTRING_LEN(channel) + RSTRING_LEN(message) + 2;
   char content_length[50];
   memcpy(content_length, "Content-Length: ", 16);
-  long cl = ltoa(content_length + 16, c_length);
+  long cl = ltoa_i(content_length + 16, c_length);
   memcpy(content_length + 16 + cl, "\r\n\r\n", 4);
   const char *boundary_disposition = "\r\n";
 
@@ -815,10 +820,14 @@ static VALUE up_server_listen(VALUE self) {
     // install signal handler
     cluster_app = s->app;
     cluster_socket = NULL;
+#ifdef _WIN32
+    signal(SIGINT, up_internal_close_sockets);
+#else
     struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
                                .sa_flags = 0};
     sigemptyset(&upclcl.sa_mask);
     sigaction(SIGINT, &upclcl, NULL);
+#endif
     // open publish ports
     VALUE rworkers = rb_ivar_get(self, at_workers);
     s->workers = FIX2INT(rworkers);
@@ -838,10 +847,14 @@ static VALUE up_server_listen(VALUE self) {
   } else {
     cluster_app = s->app;
     cluster_socket = NULL;
+#ifdef _WIN32
+    signal(SIGINT, up_internal_close_sockets);
+#else
     struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
                                .sa_flags = 0};
     sigemptyset(&upclcl.sa_mask);
     sigaction(SIGINT, &upclcl, NULL);
+#endif
   }
   uws_app_post(USE_SSL, s->app, "/*", up_server_post_handler, (void *)s);
   uws_app_any(USE_SSL, s->app, "/*", up_server_any_handler, (void *)s);
@@ -862,7 +875,7 @@ static VALUE up_server_listen(VALUE self) {
   return self;
 }
 
-static VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
+VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
   if (TYPE(channel) != T_STRING)
     channel = rb_obj_as_string(channel);
   if (TYPE(message) != T_STRING)
@@ -889,7 +902,7 @@ static VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
   return Qtrue;
 }
 
-static VALUE up_server_stop(VALUE self) {
+VALUE up_server_stop(VALUE self) {
   server_s *s = DATA_PTR(self);
   if (!s->app)
     rb_raise(rb_eRuntimeError, "no uws, did initialize call super?");
@@ -950,7 +963,7 @@ void up_setup_rack_env_template(void) {
   rb_hash_aset(rack_env_template, SERVER_PROTOCOL, http11);
 }
 
-static VALUE up_publish(VALUE self, VALUE channel, VALUE message) {
+VALUE up_publish(VALUE self, VALUE channel, VALUE message) {
   VALUE instance = rb_ivar_get(mUp, at_instance);
   if (instance != Qnil)
     return rb_funcall(instance, id_publish, 2, channel, message);
