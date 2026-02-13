@@ -1,3 +1,4 @@
+#include "bsd.h"
 #include "libusockets.h"
 #include "libuwebsockets.h"
 #ifdef _WIN32
@@ -422,8 +423,11 @@ static void up_server_cluster_listen_handler(struct us_listen_socket_t *listen_s
 
 static void up_server_listen_handler(struct us_listen_socket_t *listen_socket, uws_app_listen_config_t config,
                                      void *arg) {
-  if (listen_socket) {
+  if ((size_t)listen_socket != LIBUS_SOCKET_ERROR) {
     fprintf(stderr, "Server is listening on http://%s:%d\n", config.host, config.port);
+  } else {
+    fprintf(stderr, "Error: unable to open socket on %s port %d\n", config.host, config.port);
+    exit(2);
   }
 }
 
