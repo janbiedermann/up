@@ -87,13 +87,13 @@ static VALUE SERVER_PROTOCOL;
 uws_app_t *cluster_app;
 struct us_listen_socket_t *cluster_socket;
 
-#define set_str_val(gl_name, str)                                              \
-  rb_gc_register_address(&gl_name);                                            \
-  (gl_name) = rb_enc_str_new((str), strlen((str)), binary_encoding);           \
+#define set_str_val(gl_name, str)                                                                                      \
+  rb_gc_register_address(&gl_name);                                                                                    \
+  (gl_name) = rb_enc_str_new((str), strlen((str)), binary_encoding);                                                   \
   rb_obj_freeze(gl_name);
 
-#define set_sym_val(gl_name, str)                                              \
-  rb_gc_register_address(&gl_name);                                            \
+#define set_sym_val(gl_name, str)                                                                                      \
+  rb_gc_register_address(&gl_name);                                                                                    \
   (gl_name) = ID2SYM(rb_intern(str));
 
 #define set_global(global_name) set_str_val((global_name), #global_name)
@@ -123,10 +123,15 @@ static inline long ltoa_i(char *dest, long value) {
 
 VALUE up_internal_handle_part(RB_BLOCK_CALL_FUNC_ARGLIST(rpart, res)) {
   if (TYPE(rpart) == T_STRING)
-    uws_res_write(USE_SSL, (uws_res_t *)res, RSTRING_PTR(rpart),
-                  RSTRING_LEN(rpart));
+    uws_res_write(USE_SSL, (uws_res_t *)res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
+  RB_GC_GUARD(rpart);
   return Qnil;
 }
+
+typedef struct client_s {
+  VALUE self;
+  VALUE rclient;
+} client_s;
 
 typedef struct server_s {
   VALUE self;
@@ -136,16 +141,14 @@ typedef struct server_s {
   VALUE port;
   VALUE logger;
   VALUE env_template;
-  VALUE body;
   VALUE env;
+  VALUE body;
   long workers;
   long member_id;
   char secret[37];
 } server_s;
 
-static void up_internal_req_header_handler(const char *h, size_t h_len,
-                                           const char *v, size_t v_len,
-                                           void *renv) {
+static void up_internal_req_header_handler(const char *h, size_t h_len, const char *v, size_t v_len, void *renv) {
   char header_key[MAX_HEADER_KEY_BUF] = {'H', 'T', 'T', 'P', '_', '\0'};
   if ((h_len + 5) > MAX_HEADER_KEY_LEN)
     h_len = MAX_HEADER_KEY_LEN - 5;
@@ -156,15 +159,16 @@ static void up_internal_req_header_handler(const char *h, size_t h_len,
 
   header_key[h_len + 5] = '\0';
   if (header_key[5] == 'C' &&
-      ((strncmp(header_key + 5, "CONTENT_TYPE", 12) == 0) ||
-       (strncmp(header_key + 5, "CONTENT_LENGTH", 14) == 0))) {
+      ((strncmp(header_key + 5, "CONTENT_TYPE", 12) == 0) || (strncmp(header_key + 5, "CONTENT_LENGTH", 14) == 0))) {
     rb_hash_aset((VALUE)renv,
-                 rb_enc_str_new(header_key + 5, h_len, binary_encoding),
-                 rb_enc_str_new(v, v_len, binary_encoding));
+                 rb_enc_str_new(header_key + 5, h_len,
+                                binary_encoding),            // creates a copy
+                 rb_enc_str_new(v, v_len, binary_encoding)); // creates a copy
   } else {
     rb_hash_aset((VALUE)renv,
-                 rb_enc_str_new(header_key, h_len + 5, binary_encoding),
-                 rb_enc_str_new(v, v_len, binary_encoding));
+                 rb_enc_str_new(header_key, h_len + 5,
+                                binary_encoding),            // creates a copy
+                 rb_enc_str_new(v, v_len, binary_encoding)); // creates a copy
   }
 }
 
@@ -204,8 +208,7 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
     return ST_CONTINUE;
   if (dt == T_ARRAY) {
     for (long i = 0, end = RARRAY_LEN(data); i < end; ++i) {
-      if (up_internal_res_header_handler(key, rb_ary_entry(data, i), arg) ==
-          ST_CONTINUE)
+      if (up_internal_res_header_handler(key, rb_ary_entry(data, i), arg) == ST_CONTINUE)
         continue;
       return ST_STOP;
     }
@@ -242,8 +245,7 @@ static int up_internal_res_header_handler(VALUE key, VALUE data, VALUE arg) {
     pos_s = memchr(pos_s, '\n', pos_e - pos_s);
     if (!pos_s)
       pos_s = pos_e;
-    uws_res_write_header(USE_SSL, res, header_key, key_len, start,
-                         pos_s - start);
+    uws_res_write_header(USE_SSL, res, header_key, key_len, start, pos_s - start);
     // move forward (skip the '\n' if exists)
     ++pos_s;
   }
@@ -287,8 +289,7 @@ static bool up_internal_collect_response_body(uws_res_t *res, VALUE rparts) {
       uws_res_write(USE_SSL, res, RSTRING_PTR(rpart), RSTRING_LEN(rpart));
     }
   } else if (rb_respond_to(rparts, id_each)) {
-    rb_block_call(rparts, id_each, 0, NULL, up_internal_handle_part,
-                  (VALUE)res);
+    rb_block_call(rparts, id_each, 0, NULL, up_internal_handle_part, (VALUE)res);
   } else if (rb_respond_to(rparts, id_call)) {
     rpart = rb_funcall(rparts, id_call, 0);
     if (TYPE(rpart) != T_STRING)
@@ -344,13 +345,10 @@ response_error:
 
 static void up_internal_abort_data(uws_res_t *res, void *arg) {}
 
-static void up_internal_process_publish_post_data(uws_res_t *res,
-                                                  const char *chunk,
-                                                  size_t chunk_length,
-                                                  bool is_end, void *arg) {
+static void up_internal_process_publish_post_data(uws_res_t *res, const char *chunk, size_t chunk_length, bool is_end,
+                                                  void *arg) {
   server_s *s = (server_s *)arg;
-  const char *channel_start = chunk, *chunk_ptr = chunk,
-             *chunk_end = chunk + chunk_length, *message_start = NULL;
+  const char *channel_start = chunk, *chunk_ptr = chunk, *chunk_end = chunk + chunk_length, *message_start = NULL;
   size_t channel_length = 0, message_length = 0;
   for (; chunk_ptr < chunk_end; chunk_ptr++) {
     if (*chunk_ptr == '\r') {
@@ -361,12 +359,10 @@ static void up_internal_process_publish_post_data(uws_res_t *res,
     }
   }
   if (channel_length > 0 && message_length > 0)
-    uws_publish(USE_SSL, s->app, channel_start, channel_length, message_start,
-                message_length, TEXT, false);
+    uws_publish(USE_SSL, s->app, channel_start, channel_length, message_start, message_length, TEXT, false);
 }
 
-static void up_internal_process_post_data(uws_res_t *res, const char *chunk,
-                                          size_t chunk_length, bool is_end,
+static void up_internal_process_post_data(uws_res_t *res, const char *chunk, size_t chunk_length, bool is_end,
                                           void *arg) {
   server_s *s = (server_s *)arg;
   rb_str_cat(s->body, chunk, chunk_length);
@@ -379,8 +375,7 @@ static void up_internal_process_post_data(uws_res_t *res, const char *chunk,
   }
 }
 
-static void up_internal_publish_handler(uws_res_t *res, uws_req_t *req,
-                                        void *arg) {
+static void up_internal_publish_handler(uws_res_t *res, uws_req_t *req, void *arg) {
   server_s *s = (server_s *)arg;
   // check for header
   const char *secret;
@@ -408,47 +403,38 @@ static void up_server_any_handler(uws_res_t *res, uws_req_t *req, void *arg) {
 static void up_server_post_handler(uws_res_t *res, uws_req_t *req, void *arg) {
   // prepare rack env
   server_s *s = (server_s *)arg;
-  s->env = rb_hash_dup(s->env_template);
+  RB_OBJ_WRITE(s->self, &s->env, rb_hash_dup(s->env_template));
   up_server_prepare_env(s->env, req);
 
   // receive POST data
-  s->body = rb_enc_str_new("", 0, utf8_encoding);
+  RB_OBJ_WRITE(s->self, &s->body, rb_enc_str_new("", 0, utf8_encoding));
   uws_res_on_data(USE_SSL, res, up_internal_process_post_data, (void *)s);
   uws_res_on_aborted(USE_SSL, res, up_internal_abort_data, NULL);
 }
 
-static void
-up_server_cluster_listen_handler(struct us_listen_socket_t *listen_socket,
-                                 uws_app_listen_config_t config, void *arg) {
+static void up_server_cluster_listen_handler(struct us_listen_socket_t *listen_socket, uws_app_listen_config_t config,
+                                             void *arg) {
   if (listen_socket) {
     cluster_socket = listen_socket;
-    fprintf(stderr, "Internal Cluster communication on http://127.0.0.1:%d\n",
-            config.port);
+    fprintf(stderr, "Internal Cluster communication on http://127.0.0.1:%d\n", config.port);
   }
 }
 
-static void up_server_listen_handler(struct us_listen_socket_t *listen_socket,
-                                     uws_app_listen_config_t config,
+static void up_server_listen_handler(struct us_listen_socket_t *listen_socket, uws_app_listen_config_t config,
                                      void *arg) {
   if (listen_socket) {
-    fprintf(stderr, "Server is listening on http://%s:%d\n", config.host,
-            config.port);
+    fprintf(stderr, "Server is listening on http://%s:%d\n", config.host, config.port);
   }
 }
 
-const rb_data_type_t up_client_t = {.wrap_struct_name = "Up::PubSubClient",
-                                    .function = {.dmark = NULL,
-                                                 .dfree = NULL,
-                                                 .dsize = NULL,
-                                                 .dcompact = NULL,
-                                                 .reserved = {0}},
-                                    .parent = NULL,
-                                    .data = NULL,
-                                    .flags = 0};
+const rb_data_type_t up_client_t = {
+    .wrap_struct_name = "Up::PubSubClient",
+    .function = {.dmark = NULL, .dfree = NULL, .dsize = NULL, .dcompact = NULL, .reserved = {0}},
+    .parent = NULL,
+    .data = NULL,
+    .flags = 0};
 
-static VALUE up_client_alloc(VALUE rclass) {
-  return TypedData_Wrap_Struct(rclass, &up_client_t, NULL);
-}
+static VALUE up_client_alloc(VALUE rclass) { return TypedData_Wrap_Struct(rclass, &up_client_t, NULL); }
 
 static VALUE up_client_close(VALUE self) {
   uws_websocket_t *ws = DATA_PTR(self);
@@ -465,8 +451,7 @@ static VALUE up_client_pending(VALUE self) {
   return INT2FIX(0);
 }
 
-static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
-                                      VALUE message) {
+static void up_client_cluster_publish(char *scrt, int st, VALUE channel, VALUE message) {
   const char *opening_line = "POST " INTERNAL_PUBLISH_PATH " HTTP/1.1\r\n";
   const char *host_header = "Host: 127.0.0.1\r\n";
   const char *secret = "Secret: ";
@@ -487,10 +472,8 @@ static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
   send(st, secret_header, 46, MSG_DONTROUTE | MSG_MORE);
   send(st, content_type, strlen(content_type), MSG_DONTROUTE | MSG_MORE);
   send(st, content_length, strlen(content_length), MSG_DONTROUTE | MSG_MORE);
-  send(st, RSTRING_PTR(channel), RSTRING_LEN(channel),
-       MSG_DONTROUTE | MSG_MORE);
-  send(st, boundary_disposition, strlen(boundary_disposition),
-       MSG_DONTROUTE | MSG_MORE);
+  send(st, RSTRING_PTR(channel), RSTRING_LEN(channel), MSG_DONTROUTE | MSG_MORE);
+  send(st, boundary_disposition, strlen(boundary_disposition), MSG_DONTROUTE | MSG_MORE);
   send(st, RSTRING_PTR(message), RSTRING_LEN(message), MSG_DONTROUTE);
 
   // char read_buf[256];
@@ -498,17 +481,16 @@ static void up_client_cluster_publish(char *scrt, int st, VALUE channel,
   //   // do nothing
   // };
   // fprintf(stderr, "read: %s\n", read_buf);
+  RB_GC_GUARD(channel);
+  RB_GC_GUARD(message);
 }
 
-static void up_internal_publish_to_member(server_s *s, VALUE channel,
-                                          VALUE message, long member_idx) {
-  struct sockaddr_in member_addr = {.sin_addr.s_addr = inet_addr("127.0.0.1"),
-                                    .sin_family = AF_INET};
+static void up_internal_publish_to_member(server_s *s, VALUE channel, VALUE message, long member_idx) {
+  struct sockaddr_in member_addr = {.sin_addr.s_addr = inet_addr("127.0.0.1"), .sin_family = AF_INET};
   int st = socket(AF_INET, SOCK_STREAM, 0);
   if (st) {
     member_addr.sin_port = htons(FIX2INT(s->port) + member_idx);
-    if (connect(st, (struct sockaddr *)&member_addr,
-                sizeof(struct sockaddr_in)) == 0) {
+    if (connect(st, (struct sockaddr *)&member_addr, sizeof(struct sockaddr_in)) == 0) {
       up_client_cluster_publish(s->secret, st, channel, message);
       close(st);
     }
@@ -526,9 +508,8 @@ static VALUE up_client_publish(VALUE self, VALUE channel, VALUE message) {
   VALUE server = rb_ivar_get(self, at_server);
   if (server != Qnil) {
     server_s *s = DATA_PTR(server);
-    int res =
-        uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel),
-                    RSTRING_PTR(message), RSTRING_LEN(message), TEXT, false);
+    int res = uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel), RSTRING_PTR(message),
+                          RSTRING_LEN(message), TEXT, false);
     if (s->member_id > 0) {
       // publish to cluster members
       long i;
@@ -539,6 +520,8 @@ static VALUE up_client_publish(VALUE self, VALUE channel, VALUE message) {
     }
     return res ? Qtrue : Qfalse;
   }
+  RB_GC_GUARD(channel);
+  RB_GC_GUARD(message);
   return Qfalse;
 }
 
@@ -550,10 +533,8 @@ static VALUE up_client_subscribe(int argc, VALUE *argv, VALUE self) {
   rb_scan_args(argc, argv, "11", &channel, &is_pattern);
   if (TYPE(channel) != T_STRING)
     channel = rb_obj_as_string(channel);
-  return uws_ws_subscribe(USE_SSL, ws, RSTRING_PTR(channel),
-                          RSTRING_LEN(channel))
-             ? Qtrue
-             : Qnil;
+  return uws_ws_subscribe(USE_SSL, ws, RSTRING_PTR(channel), RSTRING_LEN(channel)) ? Qtrue : Qnil;
+  RB_GC_GUARD(channel);
 }
 
 static VALUE up_client_write(VALUE self, VALUE rdata) {
@@ -563,11 +544,10 @@ static VALUE up_client_write(VALUE self, VALUE rdata) {
   if (TYPE(rdata) != T_STRING)
     rdata = rb_obj_as_string(rdata);
   if (TYPE(rdata) != T_STRING)
-    rb_raise(rb_eTypeError,
-             "rdata not a string or cannot be converted to a string");
+    rb_raise(rb_eTypeError, "rdata cannot be converted to a string");
   int opcode = rb_enc_get(rdata) == binary_encoding ? BINARY : TEXT;
-  return INT2FIX(
-      uws_ws_send(USE_SSL, ws, RSTRING_PTR(rdata), RSTRING_LEN(rdata), opcode));
+  return INT2FIX(uws_ws_send(USE_SSL, ws, RSTRING_PTR(rdata), RSTRING_LEN(rdata), opcode));
+  RB_GC_GUARD(rdata);
 }
 
 static VALUE up_client_unsubscribe(int argc, VALUE *argv, VALUE self) {
@@ -578,42 +558,27 @@ static VALUE up_client_unsubscribe(int argc, VALUE *argv, VALUE self) {
   rb_scan_args(argc, argv, "11", &channel, &is_pattern);
   if (TYPE(channel) != T_STRING)
     channel = rb_obj_as_string(channel);
-  return uws_ws_unsubscribe(USE_SSL, ws, RSTRING_PTR(channel),
-                            RSTRING_LEN(channel))
-             ? Qtrue
-             : Qnil;
+  return uws_ws_unsubscribe(USE_SSL, ws, RSTRING_PTR(channel), RSTRING_LEN(channel)) ? Qtrue : Qnil;
+  RB_GC_GUARD(channel);
 }
 
-static void up_server_t_free(void *p) {
-  server_s *s = (server_s *)p;
-  rb_gc_unregister_address(&s->host);
-  rb_gc_unregister_address(&s->port);
-  rb_gc_unregister_address(&s->env_template);
-  free(s);
-}
+static void up_server_t_free(void *p) { free(p); }
 
-const rb_data_type_t up_server_t = {.wrap_struct_name = "Up::Ruby::Server",
-                                    .function = {.dmark = NULL,
-                                                 .dfree = up_server_t_free,
-                                                 .dsize = NULL,
-                                                 .dcompact = NULL,
-                                                 .reserved = {0}},
-                                    .parent = NULL,
-                                    .data = NULL,
-                                    .flags = RUBY_TYPED_FREE_IMMEDIATELY};
+const rb_data_type_t up_server_t = {
+    .wrap_struct_name = "Up::Ruby::Server",
+    .function = {.dmark = NULL, .dfree = up_server_t_free, .dsize = NULL, .dcompact = NULL, .reserved = {0}},
+    .parent = NULL,
+    .data = NULL,
+    .flags = RUBY_TYPED_FREE_IMMEDIATELY};
 
 static VALUE up_server_alloc(VALUE rclass) {
   server_s *s = calloc(1, sizeof(server_s));
   if (!s)
     rb_raise(rb_eNoMemError, "unable to allocate server");
-  rb_gc_register_address(&s->host);
-  rb_gc_register_address(&s->port);
-  rb_gc_register_address(&s->env_template);
   return s->self = TypedData_Wrap_Struct(rclass, &up_server_t, s);
 }
 
-static void up_internal_check_arg_types(VALUE rapp, VALUE *rhost,
-                                        VALUE *rport) {
+static void up_internal_check_arg_types(VALUE rapp, VALUE *rhost, VALUE *rport) {
   if (!rb_respond_to(rapp, id_call))
     rb_raise(rb_eArgError, "app does not respond to #call");
   if (*rhost == Qundef || *rhost == Qnil) {
@@ -643,10 +608,10 @@ static VALUE up_server_init(int argc, VALUE *argv, VALUE self) {
   up_internal_check_arg_types(rapp, &rhost, &rport);
 
   server_s *s = DATA_PTR(self);
-  s->rapp = rapp;
-  s->host = rb_obj_freeze(rhost);
-  s->port = rport;
-  s->logger = rargs[3];
+  RB_OBJ_WRITE(self, &s->rapp, rapp);
+  RB_OBJ_WRITE(self, &s->host, rb_obj_freeze(rhost));
+  RB_OBJ_WRITE(self, &s->port, rport);
+  RB_OBJ_WRITE(self, &s->logger, rargs[3]);
 
   rb_ivar_set(self, at_port, s->port);
 
@@ -654,30 +619,28 @@ static VALUE up_server_init(int argc, VALUE *argv, VALUE self) {
 }
 
 void up_ws_drain_handler(uws_websocket_t *ws, void *user_data) {
-  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
-  DATA_PTR(*client) = ws;
-  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  client_s *client = (client_s *)uws_ws_get_user_data(USE_SSL, ws);
+  VALUE rclient = client->rclient;
+  DATA_PTR(rclient) = ws;
+  VALUE rhandler = rb_ivar_get(rclient, at_handler);
   if (rb_respond_to(rhandler, id_on_drained))
-    rb_funcall(rhandler, id_on_drained, 1, *client);
-  DATA_PTR(*client) = NULL;
+    rb_funcall(rhandler, id_on_drained, 1, rclient);
+  DATA_PTR(rclient) = NULL;
 }
 
-static void up_ws_close_handler(uws_websocket_t *ws, int code,
-                                const char *message, size_t length,
-                                void *user_data) {
-  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
-  rb_ivar_set(*client, at_open, Qfalse);
-  DATA_PTR(*client) = ws;
-  VALUE rhandler = rb_ivar_get(*client, at_handler);
+static void up_ws_close_handler(uws_websocket_t *ws, int code, const char *message, size_t length, void *user_data) {
+  client_s *client = (client_s *)uws_ws_get_user_data(USE_SSL, ws);
+  VALUE rclient = client->rclient;
+  rb_ivar_set(rclient, at_open, Qfalse);
+  DATA_PTR(rclient) = ws;
+  VALUE rhandler = rb_ivar_get(rclient, at_handler);
   if (rb_respond_to(rhandler, id_on_close))
-    rb_funcall(rhandler, id_on_close, 1, *client);
-  rb_gc_unregister_address(client);
-  DATA_PTR(*client) = NULL;
+    rb_funcall(rhandler, id_on_close, 1, rclient);
+  DATA_PTR(rclient) = NULL;
   free(client);
 }
 
-static void up_ws_message_handler(uws_websocket_t *ws, const char *message,
-                                  size_t length, uws_opcode_t opcode,
+static void up_ws_message_handler(uws_websocket_t *ws, const char *message, size_t length, uws_opcode_t opcode,
                                   void *user_data) {
   VALUE rmessage;
   if (opcode == TEXT) {
@@ -687,26 +650,27 @@ static void up_ws_message_handler(uws_websocket_t *ws, const char *message,
   } else {
     return;
   }
-  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
-  DATA_PTR(*client) = ws;
-  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  client_s *client = (client_s *)uws_ws_get_user_data(USE_SSL, ws);
+  VALUE rclient = client->rclient;
+  DATA_PTR(rclient) = ws;
+  VALUE rhandler = rb_ivar_get(rclient, at_handler);
   if (rb_respond_to(rhandler, id_on_message))
-    rb_funcall(rhandler, id_on_message, 2, *client, rmessage);
-  DATA_PTR(*client) = NULL;
+    rb_funcall(rhandler, id_on_message, 2, rclient, rmessage);
+  DATA_PTR(rclient) = NULL;
 }
 
 static void up_ws_open_handler(uws_websocket_t *ws, void *user_data) {
-  VALUE *client = (VALUE *)uws_ws_get_user_data(USE_SSL, ws);
-  rb_ivar_set(*client, at_open, Qtrue);
-  DATA_PTR(*client) = ws;
-  VALUE rhandler = rb_ivar_get(*client, at_handler);
+  client_s *client = (client_s *)uws_ws_get_user_data(USE_SSL, ws);
+  VALUE rclient = client->rclient;
+  rb_ivar_set(rclient, at_open, Qtrue);
+  DATA_PTR(rclient) = ws;
+  VALUE rhandler = rb_ivar_get(rclient, at_handler);
   if (rb_respond_to(rhandler, id_on_open))
-    rb_funcall(rhandler, id_on_open, 1, *client);
-  DATA_PTR(*client) = NULL;
+    rb_funcall(rhandler, id_on_open, 1, rclient);
+  DATA_PTR(rclient) = NULL;
 }
 
-static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
-                                  uws_socket_context_t *context, void *arg) {
+static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req, uws_socket_context_t *context, void *arg) {
   server_s *s = (server_s *)arg;
   // prepare rack env
   VALUE renv = rb_hash_dup(s->env_template);
@@ -727,26 +691,23 @@ static void up_ws_upgrade_handler(uws_res_t *res, uws_req_t *req,
   if (st >= 0 && st < 300 && rhandler != Qundef && rhandler != Qnil) {
     // upgrade
 
-    VALUE *client = malloc(sizeof(VALUE));
-    rb_gc_register_address(client);
-    *client = rb_class_new_instance(0, NULL, cPubSubClient);
-    rb_ivar_set(*client, at_env, renv);
-    rb_ivar_set(*client, at_open, false);
-    rb_ivar_set(*client, at_handler, rhandler);
-    rb_ivar_set(*client, at_protocol, sym_websocket);
-    rb_ivar_set(*client, at_server, s->self);
+    client_s *client = malloc(sizeof(client_s));
+    client->self = s->self;
+    VALUE rclient = rb_class_new_instance(0, NULL, cPubSubClient);
+    RB_OBJ_WRITE(s->self, &client->rclient, rclient);
+    rb_ivar_set(rclient, at_env, renv);
+    rb_ivar_set(rclient, at_open, Qfalse);
+    rb_ivar_set(rclient, at_handler, rhandler);
+    rb_ivar_set(rclient, at_protocol, sym_websocket);
+    rb_ivar_set(rclient, at_server, s->self);
 
     const char *ws_key = NULL;
     const char *ws_protocol = NULL;
     const char *ws_extensions = NULL;
-    size_t ws_key_length =
-        uws_req_get_header(req, "sec-websocket-key", 17, &ws_key);
-    size_t ws_protocol_length =
-        uws_req_get_header(req, "sec-websocket-protocol", 22, &ws_protocol);
-    size_t ws_extensions_length =
-        uws_req_get_header(req, "sec-websocket-extensions", 24, &ws_extensions);
-    uws_res_upgrade(USE_SSL, res, (void *)client, ws_key, ws_key_length,
-                    ws_protocol, ws_protocol_length, ws_extensions,
+    size_t ws_key_length = uws_req_get_header(req, "sec-websocket-key", 17, &ws_key);
+    size_t ws_protocol_length = uws_req_get_header(req, "sec-websocket-protocol", 22, &ws_protocol);
+    size_t ws_extensions_length = uws_req_get_header(req, "sec-websocket-extensions", 24, &ws_extensions);
+    uws_res_upgrade(USE_SSL, res, (void *)client, ws_key, ws_key_length, ws_protocol, ws_protocol_length, ws_extensions,
                     ws_extensions_length, context);
   } else {
     // treat as normal request
@@ -793,7 +754,7 @@ static VALUE up_server_listen(VALUE self) {
   up_internal_check_arg_types(s->rapp, &s->host, &s->port);
   rb_ivar_set(mUp, at_instance, self);
 
-  s->env_template = rb_hash_dup(rack_env_template);
+  RB_OBJ_WRITE(s->self, &s->env_template, rb_hash_dup(rack_env_template));
   // When combined with SCRIPT_NAME and PATH_INFO, these variables can be used
   // to complete the URL.
   rb_hash_aset(s->env_template, SERVER_NAME, s->host);
@@ -811,8 +772,7 @@ static VALUE up_server_listen(VALUE self) {
   s->app = uws_create_app(USE_SSL, options);
   if (!s->app)
     rb_raise(rb_eRuntimeError, "could not init uws app");
-  uws_app_listen_config_t config = {
-      .port = FIX2INT(s->port), .host = RSTRING_PTR(s->host), .options = 0};
+  uws_app_listen_config_t config = {.port = FIX2INT(s->port), .host = RSTRING_PTR(s->host), .options = 0};
   VALUE rmember_id = rb_ivar_get(self, at_member_id);
   if (rmember_id != Qnil) {
     // got a cluster
@@ -823,8 +783,7 @@ static VALUE up_server_listen(VALUE self) {
 #ifdef _WIN32
     signal(SIGINT, up_internal_close_sockets);
 #else
-    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
-                               .sa_flags = 0};
+    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets, .sa_flags = 0};
     sigemptyset(&upclcl.sa_mask);
     sigaction(SIGINT, &upclcl, NULL);
 #endif
@@ -836,22 +795,17 @@ static VALUE up_server_listen(VALUE self) {
       rb_raise(rb_eTypeError, "cluster secret of unknown type");
     memcpy(s->secret, RSTRING_PTR(rsecret), 36);
     s->secret[36] = '\0';
-    uws_app_post(0, s->app, INTERNAL_PUBLISH_PATH,
-                up_internal_publish_handler, (void *)s);
-    uws_app_listen_config_t config_internal = {.port = config.port +
-                                                       (int)s->member_id,
-                                               .host = "127.0.0.1",
-                                               .options = 0};
-    uws_app_listen_with_config(false, s->app, config_internal,
-                               up_server_cluster_listen_handler, NULL);
+    uws_app_post(0, s->app, INTERNAL_PUBLISH_PATH, up_internal_publish_handler, (void *)s);
+    uws_app_listen_config_t config_internal = {
+        .port = config.port + (int)s->member_id, .host = "127.0.0.1", .options = 0};
+    uws_app_listen_with_config(false, s->app, config_internal, up_server_cluster_listen_handler, NULL);
   } else {
     cluster_app = s->app;
     cluster_socket = NULL;
 #ifdef _WIN32
     signal(SIGINT, up_internal_close_sockets);
 #else
-    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets,
-                               .sa_flags = 0};
+    struct sigaction upclcl = {.sa_handler = up_internal_close_sockets, .sa_flags = 0};
     sigemptyset(&upclcl.sa_mask);
     sigaction(SIGINT, &upclcl, NULL);
 #endif
@@ -869,8 +823,7 @@ static VALUE up_server_listen(VALUE self) {
                                  .close = up_ws_close_handler,
                                  .drain = up_ws_drain_handler},
          s);
-  uws_app_listen_with_config(USE_SSL, s->app, config, up_server_listen_handler,
-                             NULL);
+  uws_app_listen_with_config(USE_SSL, s->app, config, up_server_listen_handler, NULL);
   uws_app_run(USE_SSL, s->app);
   return self;
 }
@@ -888,8 +841,8 @@ VALUE up_server_publish(VALUE self, VALUE channel, VALUE message) {
       up_internal_publish_to_member(s, channel, message, i);
     }
   } else {
-    uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel),
-                RSTRING_PTR(message), RSTRING_LEN(message), TEXT, false);
+    uws_publish(USE_SSL, s->app, RSTRING_PTR(channel), RSTRING_LEN(channel), RSTRING_PTR(message), RSTRING_LEN(message),
+                TEXT, false);
     if (s->member_id > 0) {
       // publish to cluster members
       long i;
@@ -944,8 +897,7 @@ void up_setup_rack_env_template(void) {
   // up_hash_set(rack_env_template, "rack.session", Qnil);
 
   // http or https, depending on the request URL.
-  up_hash_set(rack_env_template, "rack.url_scheme",
-              rb_enc_str_new_cstr("http", binary_encoding));
+  up_hash_set(rack_env_template, "rack.url_scheme", rb_enc_str_new_cstr("http", binary_encoding));
 
   // The portion of the request URL that follows the ?, if any. May be empty,
   // but is always required!
