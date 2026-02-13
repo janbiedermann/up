@@ -46,10 +46,10 @@ extern "C" {
 #endif
 
 enum {
-    /* No meaning, default listen option */
-    LIBUS_LISTEN_DEFAULT,
-    /* We exclusively own this port, do not share it */
-    LIBUS_LISTEN_EXCLUSIVE_PORT
+  /* No meaning, default listen option */
+  LIBUS_LISTEN_DEFAULT,
+  /* We exclusively own this port, do not share it */
+  LIBUS_LISTEN_EXCLUSIVE_PORT
 };
 
 /* Library types publicly available */
@@ -85,7 +85,8 @@ int us_udp_packet_buffer_ecn(struct us_udp_packet_buffer_t *buf, int index);
 /* Receives a set of packets into specified packet buffer */
 int us_udp_socket_receive(struct us_udp_socket_t *s, struct us_udp_packet_buffer_t *buf);
 
-void us_udp_buffer_set_packet_payload(struct us_udp_packet_buffer_t *send_buf, int index, int offset, void *payload, int length, void *peer_addr);
+void us_udp_buffer_set_packet_payload(struct us_udp_packet_buffer_t *send_buf, int index, int offset, void *payload,
+                                      int length, void *peer_addr);
 
 int us_udp_socket_send(struct us_udp_socket_t *s, struct us_udp_packet_buffer_t *buf, int num);
 
@@ -95,11 +96,16 @@ struct us_udp_packet_buffer_t *us_create_udp_packet_buffer();
 /* Creates a (heavy-weight) UDP socket with a user space ring buffer. Again, this one is heavy weight and
  * shoud be reused. One entire QUIC server can be implemented using only one single UDP socket so weight
  * is not a concern as is the case for TCP sockets which are 1-to-1 with TCP connections. */
-//struct us_udp_socket_t *us_create_udp_socket(struct us_loop_t *loop, void (*read_cb)(struct us_udp_socket_t *), unsigned short port);
+// struct us_udp_socket_t *us_create_udp_socket(struct us_loop_t *loop, void (*read_cb)(struct us_udp_socket_t *),
+// unsigned short port);
 
-//struct us_udp_socket_t *us_create_udp_socket(struct us_loop_t *loop, void (*data_cb)(struct us_udp_socket_t *, struct us_udp_packet_buffer_t *, int), void (*drain_cb)(struct us_udp_socket_t *), char *host, unsigned short port);
+// struct us_udp_socket_t *us_create_udp_socket(struct us_loop_t *loop, void (*data_cb)(struct us_udp_socket_t *, struct
+// us_udp_packet_buffer_t *, int), void (*drain_cb)(struct us_udp_socket_t *), char *host, unsigned short port);
 
-struct us_udp_socket_t *us_create_udp_socket(struct us_loop_t *loop, struct us_udp_packet_buffer_t *buf, void (*data_cb)(struct us_udp_socket_t *, struct us_udp_packet_buffer_t *, int), void (*drain_cb)(struct us_udp_socket_t *), const char *host, unsigned short port, void *user);
+struct us_udp_socket_t *
+us_create_udp_socket(struct us_loop_t *loop, struct us_udp_packet_buffer_t *buf,
+                     void (*data_cb)(struct us_udp_socket_t *, struct us_udp_packet_buffer_t *, int),
+                     void (*drain_cb)(struct us_udp_socket_t *), const char *host, unsigned short port, void *user);
 
 /* This one is ugly, should be ext! not user */
 void *us_udp_socket_user(struct us_udp_socket_t *s);
@@ -128,56 +134,62 @@ struct us_loop_t *us_timer_loop(struct us_timer_t *t);
 /* Public interfaces for contexts */
 
 struct us_socket_context_options_t {
-    const char *key_file_name;
-    const char *cert_file_name;
-    const char *passphrase;
-    const char *dh_params_file_name;
-    const char *ca_file_name;
-    const char *ssl_ciphers;
-    int ssl_prefer_low_memory_usage; /* Todo: rename to prefer_low_memory_usage and apply for TCP as well */
+  const char *key_file_name;
+  const char *cert_file_name;
+  const char *passphrase;
+  const char *dh_params_file_name;
+  const char *ca_file_name;
+  const char *ssl_ciphers;
+  int ssl_prefer_low_memory_usage; /* Todo: rename to prefer_low_memory_usage and apply for TCP as well */
 };
 
 /* Return 15-bit timestamp for this context */
 unsigned short us_socket_context_timestamp(int ssl, struct us_socket_context_t *context);
 
 /* Adds SNI domain and cert in asn1 format */
-void us_socket_context_add_server_name(int ssl, struct us_socket_context_t *context, const char *hostname_pattern, struct us_socket_context_options_t options, void *user);
+void us_socket_context_add_server_name(int ssl, struct us_socket_context_t *context, const char *hostname_pattern,
+                                       struct us_socket_context_options_t options, void *user);
 void us_socket_context_remove_server_name(int ssl, struct us_socket_context_t *context, const char *hostname_pattern);
-void us_socket_context_on_server_name(int ssl, struct us_socket_context_t *context, void (*cb)(struct us_socket_context_t *, const char *hostname));
+void us_socket_context_on_server_name(int ssl, struct us_socket_context_t *context,
+                                      void (*cb)(struct us_socket_context_t *, const char *hostname));
 void *us_socket_server_name_userdata(int ssl, struct us_socket_t *s);
-void *us_socket_context_find_server_name_userdata(int ssl, struct us_socket_context_t *context, const char *hostname_pattern);
+void *us_socket_context_find_server_name_userdata(int ssl, struct us_socket_context_t *context,
+                                                  const char *hostname_pattern);
 
 /* Returns the underlying SSL native handle, such as SSL_CTX or nullptr */
 void *us_socket_context_get_native_handle(int ssl, struct us_socket_context_t *context);
 
 /* A socket context holds shared callbacks and user data extension for associated sockets */
-struct us_socket_context_t *us_create_socket_context(int ssl, struct us_loop_t *loop,
-    int ext_size, struct us_socket_context_options_t options);
+struct us_socket_context_t *us_create_socket_context(int ssl, struct us_loop_t *loop, int ext_size,
+                                                     struct us_socket_context_options_t options);
 
 /* Delete resources allocated at creation time. */
 void us_socket_context_free(int ssl, struct us_socket_context_t *context);
 
 /* Setters of various async callbacks */
 void us_socket_context_on_pre_open(int ssl, struct us_socket_context_t *context,
-    LIBUS_SOCKET_DESCRIPTOR (*on_pre_open)(struct us_socket_context_t *context, LIBUS_SOCKET_DESCRIPTOR fd));
+                                   LIBUS_SOCKET_DESCRIPTOR (*on_pre_open)(struct us_socket_context_t *context,
+                                                                          LIBUS_SOCKET_DESCRIPTOR fd));
 void us_socket_context_on_open(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_open)(struct us_socket_t *s, int is_client, char *ip, int ip_length));
+                               struct us_socket_t *(*on_open)(struct us_socket_t *s, int is_client, char *ip,
+                                                              int ip_length));
 void us_socket_context_on_close(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_close)(struct us_socket_t *s, int code, void *reason));
+                                struct us_socket_t *(*on_close)(struct us_socket_t *s, int code, void *reason));
 void us_socket_context_on_data(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_data)(struct us_socket_t *s, char *data, int length));
+                               struct us_socket_t *(*on_data)(struct us_socket_t *s, char *data, int length));
 void us_socket_context_on_writable(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_writable)(struct us_socket_t *s));
+                                   struct us_socket_t *(*on_writable)(struct us_socket_t *s));
 void us_socket_context_on_timeout(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_timeout)(struct us_socket_t *s));
+                                  struct us_socket_t *(*on_timeout)(struct us_socket_t *s));
 void us_socket_context_on_long_timeout(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_timeout)(struct us_socket_t *s));
+                                       struct us_socket_t *(*on_timeout)(struct us_socket_t *s));
 /* This one is only used for when a connecting socket fails in a late stage. */
 void us_socket_context_on_connect_error(int ssl, struct us_socket_context_t *context,
-    struct us_socket_t *(*on_connect_error)(struct us_socket_t *s, int code));
+                                        struct us_socket_t *(*on_connect_error)(struct us_socket_t *s, int code));
 
 /* Emitted when a socket has been half-closed */
-void us_socket_context_on_end(int ssl, struct us_socket_context_t *context, struct us_socket_t *(*on_end)(struct us_socket_t *s));
+void us_socket_context_on_end(int ssl, struct us_socket_context_t *context,
+                              struct us_socket_t *(*on_end)(struct us_socket_t *s));
 
 /* Returns user data extension for this socket context */
 void *us_socket_context_ext(int ssl, struct us_socket_context_t *context);
@@ -186,25 +198,26 @@ void *us_socket_context_ext(int ssl, struct us_socket_context_t *context);
 void us_socket_context_close(int ssl, struct us_socket_context_t *context);
 
 /* Listen for connections. Acts as the main driving cog in a server. Will call set async callbacks. */
-struct us_listen_socket_t *us_socket_context_listen(int ssl, struct us_socket_context_t *context,
-    const char *host, int port, int options, int socket_ext_size);
+struct us_listen_socket_t *us_socket_context_listen(int ssl, struct us_socket_context_t *context, const char *host,
+                                                    int port, int options, int socket_ext_size);
 
-struct us_listen_socket_t *us_socket_context_listen_unix(int ssl, struct us_socket_context_t *context,
-    const char *path, int options, int socket_ext_size);
+struct us_listen_socket_t *us_socket_context_listen_unix(int ssl, struct us_socket_context_t *context, const char *path,
+                                                         int options, int socket_ext_size);
 
 /* listen_socket.c/.h */
 void us_listen_socket_close(int ssl, struct us_listen_socket_t *ls);
 
 /* Adopt a socket which was accepted either internally, or from another accept() outside libusockets */
-struct us_socket_t *us_adopt_accepted_socket(int ssl, struct us_socket_context_t *context, LIBUS_SOCKET_DESCRIPTOR client_fd,
-    unsigned int socket_ext_size, char *addr_ip, int addr_ip_length);
+struct us_socket_t *us_adopt_accepted_socket(int ssl, struct us_socket_context_t *context,
+                                             LIBUS_SOCKET_DESCRIPTOR client_fd, unsigned int socket_ext_size,
+                                             char *addr_ip, int addr_ip_length);
 
 /* Land in on_open or on_connection_error or return null or return socket */
-struct us_socket_t *us_socket_context_connect(int ssl, struct us_socket_context_t *context,
-    const char *host, int port, const char *source_host, int options, int socket_ext_size);
+struct us_socket_t *us_socket_context_connect(int ssl, struct us_socket_context_t *context, const char *host, int port,
+                                              const char *source_host, int options, int socket_ext_size);
 
 struct us_socket_t *us_socket_context_connect_unix(int ssl, struct us_socket_context_t *context,
-    const char *server_path, int options, int socket_ext_size);
+                                                   const char *server_path, int options, int socket_ext_size);
 
 /* Is this socket established? Can be used to check if a connecting socket has fired the on_open event yet.
  * Can also be used to determine if a socket is a listen_socket or not, but you probably know that already. */
@@ -220,17 +233,21 @@ struct us_loop_t *us_socket_context_loop(int ssl, struct us_socket_context_t *co
 
 /* Invalidates passed socket, returning a new resized socket which belongs to a different socket context.
  * Used mainly for "socket upgrades" such as when transitioning from HTTP to WebSocket. */
-struct us_socket_t *us_socket_context_adopt_socket(int ssl, struct us_socket_context_t *context, struct us_socket_t *s, int ext_size);
+struct us_socket_t *us_socket_context_adopt_socket(int ssl, struct us_socket_context_t *context, struct us_socket_t *s,
+                                                   int ext_size);
 
-/* Create a child socket context which acts much like its own socket context with its own callbacks yet still relies on the
- * parent socket context for some shared resources. Child socket contexts should be used together with socket adoptions and nothing else. */
-struct us_socket_context_t *us_create_child_socket_context(int ssl, struct us_socket_context_t *context, int context_ext_size);
+/* Create a child socket context which acts much like its own socket context with its own callbacks yet still relies on
+ * the parent socket context for some shared resources. Child socket contexts should be used together with socket
+ * adoptions and nothing else. */
+struct us_socket_context_t *us_create_child_socket_context(int ssl, struct us_socket_context_t *context,
+                                                           int context_ext_size);
 
 /* Public interfaces for loops */
 
 /* Returns a new event loop with user data extension */
 struct us_loop_t *us_create_loop(void *hint, void (*wakeup_cb)(struct us_loop_t *loop),
-    void (*pre_cb)(struct us_loop_t *loop), void (*post_cb)(struct us_loop_t *loop), unsigned int ext_size);
+                                 void (*pre_cb)(struct us_loop_t *loop), void (*post_cb)(struct us_loop_t *loop),
+                                 unsigned int ext_size);
 
 /* Frees the loop immediately */
 void us_loop_free(struct us_loop_t *loop);
@@ -291,7 +308,8 @@ void *us_socket_get_native_handle(int ssl, struct us_socket_t *s);
 int us_socket_write(int ssl, struct us_socket_t *s, const char *data, int length, int msg_more);
 
 /* Special path for non-SSL sockets. Used to send header and payload in one go. Works like us_socket_write. */
-int us_socket_write2(int ssl, struct us_socket_t *s, const char *header, int header_length, const char *payload, int payload_length);
+int us_socket_write2(int ssl, struct us_socket_t *s, const char *header, int header_length, const char *payload,
+                     int payload_length);
 
 /* Set a low precision, high performance timer on a socket. A socket can only have one single active timer
  * at any given point in time. Will remove any such pre set timer */
@@ -340,7 +358,8 @@ void us_socket_remote_address(int ssl, struct us_socket_t *s, char *buf, int *le
 #endif
 
 /* Decide what eventing system to use by default */
-#if !defined(LIBUS_USE_IO_URING) && !defined(LIBUS_USE_EPOLL) && !defined(LIBUS_USE_LIBUV) && !defined(LIBUS_USE_GCD) && !defined(LIBUS_USE_KQUEUE) && !defined(LIBUS_USE_ASIO)
+#if !defined(LIBUS_USE_IO_URING) && !defined(LIBUS_USE_EPOLL) && !defined(LIBUS_USE_LIBUV) &&                          \
+    !defined(LIBUS_USE_GCD) && !defined(LIBUS_USE_KQUEUE) && !defined(LIBUS_USE_ASIO)
 #if defined(_WIN32)
 #define LIBUS_USE_LIBUV
 #elif defined(__APPLE__) || defined(__FreeBSD__)

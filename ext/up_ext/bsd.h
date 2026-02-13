@@ -48,11 +48,11 @@
 #define LIBUS_UDP_MAX_NUM 1024
 
 struct bsd_addr_t {
-    struct sockaddr_storage mem;
-    socklen_t len;
-    char *ip;
-    int ip_length;
-    int port;
+  struct sockaddr_storage mem;
+  socklen_t len;
+  char *ip;
+  int ip_length;
+  int port;
 };
 
 int bsd_sendmmsg(LIBUS_SOCKET_DESCRIPTOR fd, void *msgvec, unsigned int vlen, int flags);
@@ -63,7 +63,8 @@ char *bsd_udp_packet_buffer_peer(void *msgvec, int index);
 int bsd_udp_packet_buffer_local_ip(void *msgvec, int index, char *ip);
 int bsd_udp_packet_buffer_ecn(void *msgvec, int index);
 void *bsd_create_udp_packet_buffer();
-void bsd_udp_buffer_set_packet_payload(struct us_udp_packet_buffer_t *send_buf, int index, int offset, void *payload, int length, void *peer_addr);
+void bsd_udp_buffer_set_packet_payload(struct us_udp_packet_buffer_t *send_buf, int index, int offset, void *payload,
+                                       int length, void *peer_addr);
 
 LIBUS_SOCKET_DESCRIPTOR apple_no_sigpipe(LIBUS_SOCKET_DESCRIPTOR fd);
 LIBUS_SOCKET_DESCRIPTOR bsd_set_nonblocking(LIBUS_SOCKET_DESCRIPTOR fd);
@@ -90,7 +91,8 @@ LIBUS_SOCKET_DESCRIPTOR bsd_accept_socket(LIBUS_SOCKET_DESCRIPTOR fd, struct bsd
 
 int bsd_recv(LIBUS_SOCKET_DESCRIPTOR fd, void *buf, int length, int flags);
 int bsd_send(LIBUS_SOCKET_DESCRIPTOR fd, const char *buf, int length, int msg_more);
-int bsd_write2(LIBUS_SOCKET_DESCRIPTOR fd, const char *header, int header_length, const char *payload, int payload_length);
+int bsd_write2(LIBUS_SOCKET_DESCRIPTOR fd, const char *header, int header_length, const char *payload,
+               int payload_length);
 int bsd_would_block();
 
 // return LIBUS_SOCKET_ERROR or the fd that represents listen socket

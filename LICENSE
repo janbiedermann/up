@@ -22,7 +22,14 @@ SOFTWARE.
 
 
 
-Files from the uWebSocket project in the lib/up_ext directory have been
+libuwebsocket.* files in the ext/up_ext directory have been originally taken
+from https://github.com/cirospaciari/uWebSockets/tree/f33291d10a2051ba0f10c18761c030fb00390fdf
+Copyright 2022 Ciro Spaciari
+MIT Licence, as above
+
+
+
+Files from the uWebSocket project in the ext/up_ext directory have been
 originally taken from https://github.com/uNetworking/uWebSockets and
 employ the Apache License as follows and as specified within the files itself:
 
